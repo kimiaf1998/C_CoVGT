@@ -1,2 +1,4 @@
 .idea
 __pycache__
+tools/__pycache__/
+train/__pycache__
