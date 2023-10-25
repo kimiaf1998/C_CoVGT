@@ -32,12 +32,30 @@ def get_video_list(filename, out_file):
 
 
 def extract_frame(video, dst):
+    """
+    Extract frames from a video at 6 fps using FFmpeg.
+
+    Removes the existing destination directory if present, then saves the extracted frames
+    as high-quality JPEGs in the specified directory.
+
+    Parameters:
+    - video (str): Path to the input video.
+    - dst (str): Directory to save extracted frames.
+
+    Requires:
+    - FFmpeg in system's PATH.
+
+    Returns:
+    - None
+    """
     
     with open(os.devnull, 'w') as ffmpeg_log:
         if os.path.exists(dst):
             # print(" cleanup: "+dst+"/")
             shutil.rmtree(dst)
         os.makedirs(dst)
+        print("dst: ", dst)
+        print("video: ", video)
         video2frame_cmd = [
             "ffmpeg",
             '-y',
@@ -47,11 +65,25 @@ def extract_frame(video, dst):
             '-qscale:v', "2",
             '{0}/%06d.jpg'.format(dst)
         ]
-        subprocess.call(video2frame_cmd, stdout = ffmpeg_log, stderr=ffmpeg_log)
+        subprocess.call(video2frame_cmd)
 
 
 def extract_videos(raw_dir, vlist, frame_dir, map_vid=None):
-    
+    """
+    Extract frames from videos listed in vlist.
+
+    For each video ID in vlist, frames are extracted using extract_frame.
+    Optionally, video IDs can be mapped using the map_vid dictionary.
+
+    Parameters:
+    - raw_dir (str): Directory with raw videos.
+    - vlist (list): Video IDs to process.
+    - frame_dir (str): Directory to save extracted frames.
+    - map_vid (dict, optional): Dictionary to map video IDs to their saved locations.
+
+    Returns:
+    - None
+    """
     vnum = len(vlist)
     for id, vid in enumerate(vlist):
         # if id <= 400: continue
@@ -70,14 +102,14 @@ def extract_videos(raw_dir, vlist, frame_dir, map_vid=None):
 
 
 def main():
-    video_dir = '/storage/jbxiao/workspace/data/nextqa/'
+    video_dir = '../../data/nextqa/'
     raw_dir = osp.join(video_dir, 'videos/')
-    frame_dir = osp.join(video_dir, 'frames_val/')
+    frame_dir = osp.join(video_dir, 'frames_test/')
     anno_dir = '../datasets/nextqa/'
     vlist_file = osp.join(anno_dir, 'vlist.json')
     map_file = osp.join(anno_dir, 'map_vid_vidorID.json')
     if not osp.exists(vlist_file):
-        dset = 'val' #train/test
+        dset = 'test' #train/val
         qa_file = osp.join(anno_dir, f'{dset}.csv')
         vlist_file = osp.join(anno_dir, f'vlist_{dset}.json')
         vlist = get_video_list(qa_file, vlist_file)
