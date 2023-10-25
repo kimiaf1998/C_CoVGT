@@ -24,8 +24,8 @@ Assume you have installed Anaconda3, cuda version > 11.0 with gpu memory >= 24G,
 >conda create -n videoqa python==3.8.16
 >conda activate videoqa
 >git clone https://github.com/doc-doc/CoVGT.git
+>conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
 >pip install -r requirements.txt
->conda install pytorch==1.8.1 torchvision==0.9.1 cudatoolkit=11.1 -c pytorch -c nvidia
 ```
 ## Preparation
 Please create a data folder outside this repo, so you have two folders in your workspace 'workspace/data/' and 'workspace/CoVGT/'. 
@@ -35,7 +35,7 @@ Please download the related video feature and QA annotations according to the li
 
 ## Inference
 ```
-./shell/next_test.sh 0
+./shells/next_test.sh 0
 ```
 ## Evaluation
 ```
