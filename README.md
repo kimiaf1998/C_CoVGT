@@ -31,7 +31,7 @@ Assume you have installed Anaconda3, cuda version > 11.0 with gpu memory >= 24G,
 Please create a data folder outside this repo, so you have two folders in your workspace 'workspace/data/' and 'workspace/CoVGT/'. 
 
 Below we use NExT-QA as an example to get you farmiliar with the code. 
-Please download the related video feature and QA annotations according to the links provided in the ```Results and Resources``` section. Note that the QA annotations will be saved into ```workspace/CoVGT/datasets/nextqa/``` after you clone this repo., video features into ```workspace/data/nextqa/``` and checkpoint files into ```workspace/data/save_models/nextqa/```. Change default paths in global_parameters.py and args.py for your own datasets.
+Please download the related video feature and QA annotations according to the links provided in the ```Results and Resources``` section. Note that the QA annotations will be saved into ```workspace/CoVGT/datasets/nextqa/``` after you clone this repo., video features into ```workspace/data/nextqa/{frame_feat, region_feat_n}``` and checkpoint files into ```workspace/data/save_models/nextqa/```. Change default paths in global_parameters.py and args.py for your own datasets.
 
 ## Inference
 ```
