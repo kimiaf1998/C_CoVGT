@@ -1,10 +1,9 @@
 import argparse, os
 import h5py
-from scipy.misc import imresize
 import skvideo.io as sio
 from PIL import Image
-import cv2
-import json
+# import cv2
+# import json
 import torch
 from torch import nn
 import torchvision
@@ -14,9 +13,9 @@ import shutil
 import subprocess
 from models import resnext
 from datautils import utils
-from datautils import tgif_qa
-from datautils import msrvtt_qa
-from datautils import msvd_qa
+# from datautils import tgif_qa
+# from datautils import msrvtt_qa
+# from datautils import msvd_qa
 import os.path as osp
 import sys
 sys.path.insert(0, '../')
@@ -102,19 +101,30 @@ def extract_clips_with_consecutive_frames(path, num_clips, num_frames_per_clip):
         A list of raw features of clips.
     """
     
+    4624876965
+    
     clips = list()
     t1 = time.time()
-    frame_list = sorted(os.listdir(path))
+    try:
+        frame_list = sorted(os.listdir(path))
+    except FileNotFoundError as e:
+        print(f"File not found: {e.filename}")
     video_data = [np.asarray(Image.open(osp.join(path, img))) for img in frame_list]
     
     valid = True
     video_data = np.asarray(video_data)
     t2 = time.time()
-    print(t2-t1)
+    print(f"{(t2-t1):.2f}s")
 
     total_frames = video_data.shape[0]
+    if total_frames == 0:
+        print("*** Empty video frames ***")
+        return None, False
     img_size = (args.image_height, args.image_width)
+    #print("linspace:", np.linspace(0, total_frames, num_clips + 2, dtype=np.int32))
+    #print("totalframes:", total_frames)
     for i in np.linspace(0, total_frames, num_clips + 2, dtype=np.int32)[1:num_clips + 1]:
+        #print("i:",i)
         clip_start = int(i) - int(num_frames_per_clip / 2)
         clip_end = int(i) + int(num_frames_per_clip / 2)
         if clip_start < 0:
@@ -122,9 +132,12 @@ def extract_clips_with_consecutive_frames(path, num_clips, num_frames_per_clip):
         if clip_end > total_frames:
             clip_end = total_frames - 1
         clip = video_data[clip_start:clip_end]
+        #print("clip_start: ", clip_start)
+        #print("video_data: ", video_data)
 
         if clip_start == 0:
             shortage = num_frames_per_clip - (clip_end - clip_start)
+            #print("shortage: ", shortage)
             added_frames = []
             for _ in range(shortage):
                 added_frames.append(np.expand_dims(video_data[clip_start], axis=0))
@@ -153,7 +166,8 @@ def extract_clips_with_consecutive_frames(path, num_clips, num_frames_per_clip):
         for frame_data in clip:
             # frame_data = clip[j]
             img = Image.fromarray(frame_data)
-            img = imresize(img, img_size, interp='bicubic')
+            # img = imresize(img, img_size, interp='bicubic')
+            img = img.resize(img_size)
             frame_data = np.array(img)
             frame_data = frame_data.transpose(2, 0, 1)[None]
             new_clip.append(frame_data)
@@ -205,8 +219,8 @@ def extract_clip_frames(vpath, clips):
         new_clip = []
         for j in range(4):
             frame_data = clip[j]
-            img = Image.fromarray(frame_data)
-            img = imresize(img, img_size, interp='bicubic')
+            img = Image.fromarray(frame_data).resize(img_size)
+            # img = imresize(img, img_size, interp='bicubic')
             img = img.transpose(2, 0, 1)[None]
             frame_data = np.array(img)
             new_clip.append(frame_data)
@@ -323,10 +337,14 @@ def generate_h5(model, v_path, v_file, num_clips, outfile):
             os.makedirs(args.dataset)
     
     vlist = load_file(v_file)
-    dataset_size = len(vlist) 
+    #vlist = [4624876965]
+    dataset_size = len(vlist)
     print(dataset_size)
     vnames = []
     with h5py.File(outfile, 'w') as fd:
+        # for key, value in fd.items():
+        #     print("key: ", key)
+        #     print("val: ", value)
         feat_dset = None
         video_ids_dset = None
         i0 = 0
@@ -336,6 +354,7 @@ def generate_h5(model, v_path, v_file, num_clips, outfile):
             _t['misc'].tic()
             
             video_path = osp.join(v_path, str(vlist[i]))
+            print("video id:", vlist[i])
             
             clips, valid = extract_clips_with_consecutive_frames(video_path, num_clips=num_clips, num_frames_per_clip=16)
             
@@ -364,7 +383,7 @@ def generate_h5(model, v_path, v_file, num_clips, outfile):
                     C, F, D = clip_feat.shape
                     feat_dset = fd.create_dataset('resnet_features', (dataset_size, C, F, D),
                                                   dtype=np.float32)
-                    video_ids_dset = fd.create_dataset('ids', shape=(dataset_size,), dtype=np.int)
+                    video_ids_dset = fd.create_dataset('ids', shape=(dataset_size,), dtype=np.int32)
             
             elif args.feature_type == 'motion':
                 if valid:
@@ -379,9 +398,8 @@ def generate_h5(model, v_path, v_file, num_clips, outfile):
                     C, D = clip_feat.shape
                     feat_dset = fd.create_dataset('resnext_features', (dataset_size, C, D),
                                                   dtype=np.float32)
-                    video_ids_dset = fd.create_dataset('ids', shape=(dataset_size,), dtype=np.int)
+                    video_ids_dset = fd.create_dataset('ids', shape=(dataset_size,), dtype=np.int32)
 
-            
             i1 = i0 + 1
             feat_dset[i0:i1] = clip_feat
             video_ids_dset[i0:i1] = int(vlist[i])
@@ -393,9 +411,9 @@ def generate_h5(model, v_path, v_file, num_clips, outfile):
                         .format(i1, dataset_size, _t['misc'].average_time,
                                 _t['misc'].average_time * (dataset_size - i1) / 3600))
         
-        varry = np.array(vlist, dtype=object)
-        string_dt = h5py.special_dtype(vlen=str)
-        fd.create_dataset('ids', data=varry, dtype=string_dt)
+        # varry = np.array(vlist, dtype=object)
+        # string_dt = h5py.special_dtype(vlen=str)
+        # fd.create_dataset('ids', data=varry, dtype=string_dt)
 
 
 if __name__ == '__main__':
@@ -470,7 +488,7 @@ if __name__ == '__main__':
 
     elif args.dataset == 'nextqa':
         args.video_list_file = '../datasets/nextqa/vlist.json' #obtained from train/val/test csv files
-        args.video_dir = '/storage/jbxiao/workspace/data/nextqa/frames/' #extacted video frames, refer to extract_video.py
+        args.video_dir = '../../data/nextqa/frames_test/' #extacted video frames, refer to extract_video.py
         if args.model == 'resnet101':
             model = build_resnet()
         elif args.model == 'resnext101':
