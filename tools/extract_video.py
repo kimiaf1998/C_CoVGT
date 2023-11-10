@@ -102,20 +102,26 @@ def extract_videos(raw_dir, vlist, frame_dir, map_vid=None):
 
 
 def main():
-    video_dir = '../../data/nextqa/'
+    dataset = 'STAR'
+    video_dir = f'../../data/{dataset}/'
     raw_dir = osp.join(video_dir, 'videos/')
-    frame_dir = osp.join(video_dir, 'frames_test/')
-    anno_dir = '../datasets/nextqa/'
-    vlist_file = osp.join(anno_dir, 'vlist.json')
-    map_file = osp.join(anno_dir, 'map_vid_vidorID.json')
-    if not osp.exists(vlist_file):
-        dset = 'test' #train/val
-        qa_file = osp.join(anno_dir, f'{dset}.csv')
-        vlist_file = osp.join(anno_dir, f'vlist_{dset}.json')
-        vlist = get_video_list(qa_file, vlist_file)
+    frame_dir = osp.join(video_dir, 'frames/')
+    anno_dir = f'../datasets/{dataset}/'
+    if dataset is not 'STAR':
+        vlist_file = osp.join(anno_dir, 'vlist.json')
+        map_file = osp.join(anno_dir, 'map_vid_vidorID.json')
+        if not osp.exists(vlist_file):
+            dset = 'test' #train/val
+            qa_file = osp.join(anno_dir, f'{dset}.csv')
+            vlist_file = osp.join(anno_dir, f'vlist_{dset}.json')
+            vlist = get_video_list(qa_file, vlist_file)
+        else:
+            vlist = load_file(vlist_file)
+        map_vid = load_file(map_file)
     else:
-        vlist = load_file(vlist_file)
-    map_vid = load_file(map_file)
+        # TODO
+        vlist = osp.listdir(raw_dir)
+        map_vid = None
     extract_videos(raw_dir, vlist, frame_dir, map_vid=map_vid)
 
 
