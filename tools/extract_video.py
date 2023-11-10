@@ -120,7 +120,9 @@ def main():
         map_vid = load_file(map_file)
     else:
         # TODO
-        vlist = osp.listdir(raw_dir)
+        vlist = os.listdir(raw_dir)
+        # Extract file names without suffix
+        vlist = [os.path.splitext(file)[0] for file in vlist]
         map_vid = None
     extract_videos(raw_dir, vlist, frame_dir, map_vid=map_vid)
 
