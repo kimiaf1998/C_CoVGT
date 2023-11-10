@@ -17,41 +17,55 @@ def np2h5(in_dir, out_dir, video_list, mode):
     feat_dset, bbox_dset, ids_dset = None, None, None
     bbox_num = 20
     for video in video_list:
-        bbox_file = osp.join(in_dir, str(video) + '.npz')
-        npz = np.load(bbox_file)
-        roi_feat = npz['feat']
-        bnum = roi_feat.shape[2]
-        roi_bbox = npz['bbox']
-        # if bnum < bbox_num:
-        #     add_num = bbox_num - bnum
-        #     print(add_num)
-        #     add_feat, add_bbox = [], []
-        #     for _ in range(add_num):
-        #         add_feat.append(roi_feat[:, :, bnum-1, :])
-        #         add_bbox.append(roi_bbox[:, :, bnum-1, :])
-        #     add_feat = np.asarray(add_feat).transpose(1, 2, 0, 3)
-        #     add_bbox = np.asarray(add_bbox).transpose(1, 2, 0, 3)
-        #     print(add_feat.shape, add_bbox.shape)
-        #     roi_feat = np.concatenate((roi_feat, add_feat), axis=2)
-        #     roi_bbox = np.concatenate((roi_bbox, add_bbox), axis=2)
+        frames_list = os.path.listdir()
+        roi_feats = []
+        roi_bboxes = []
+        for frame in frames_list:
+            bbox_file = osp.join(osp.join(in_dir, str(video)), frame + '.npz')
+            npz = np.load(bbox_file)
+            roi_feat = npz['x']
+            # bnum = roi_feat.shape[2]
+            roi_bbox = npz['bbox']
+            # if bnum < bbox_num:
+            #     add_num = bbox_num - bnum
+            #     print(add_num)
+            #     add_feat, add_bbox = [], []
+            #     for _ in range(add_num):
+            #         add_feat.append(roi_feat[:, :, bnum-1, :])
+            #         add_bbox.append(roi_bbox[:, :, bnum-1, :])
+            #     add_feat = np.asarray(add_feat).transpose(1, 2, 0, 3)
+            #     add_bbox = np.asarray(add_bbox).transpose(1, 2, 0, 3)
+            #     print(add_feat.shape, add_bbox.shape)
+            #     roi_feat = np.concatenate((roi_feat, add_feat), axis=2)
+            #     roi_bbox = np.concatenate((roi_bbox, add_bbox), axis=2)
 
-        roi_feat = roi_feat[:, :, :bbox_num, :]
-       
-        roi_bbox = roi_bbox[:, :, :bbox_num, :]
+            roi_feat = roi_feat[:bbox_num, :]
+            roi_bbox = roi_bbox[:bbox_num, :]
+
+            roi_feats.append(roi_feat)
+            roi_bboxes.append(roi_bbox)
+
+        nclip, nframe = 8, 4
+        clip_feats = np.array(roi_feats).squeeze()
+        clip_bboxes = np.array(roi_bboxes).squeeze()
+        print("clip_feats: ", clip_feats.shape)
+        clip_feats = clip_feats.reshape(nclip, nframe, -1)
+        clip_bboxes = clip_bboxes.reshape(nclip, nframe, -1)
+
         # print(roi_feat.shape, roi_bbox.shape)
         if feat_dset is None:
             dataset_size = len(video_list)
-            C, F, R, D = roi_feat.shape
+            C, F, R, D = clip_feats.shape
             feat_dset = video_fd.create_dataset('feat', (dataset_size, C, F, R, D),
                                                   dtype=np.float32)
             ids_dset = video_fd.create_dataset('ids', shape=(dataset_size,), dtype=np.int)
-            C, F, R, D = roi_bbox.shape
+            C, F, R, D = clip_bboxes.shape
             bbox_dset = video_fd.create_dataset('bbox', shape=(dataset_size, C, F, R, D),
                                                 dtype=np.float32)
             ival = 0
 
-        feat_dset[ival:(ival + 1)] = roi_feat
-        bbox_dset[ival:(ival + 1)] = roi_bbox
+        feat_dset[ival:(ival + 1)] = clip_feats
+        bbox_dset[ival:(ival + 1)] = clip_bboxes
         ids_dset[ival:(ival + 1)] = int(video)
 
         ival += 1
@@ -119,8 +133,8 @@ def get_video_list(filename):
 
 def main():
     dataset = 'nextqa'
-    data_dir = '../../data/{}/'.format(dataset)
-    dataset_dir = '../datasets/{}/'.format(dataset)
+    data_dir = '../data/{}/'.format(dataset)
+    dataset_dir = 'datasets/{}/'.format(dataset)
     # in_dir = osp.join(data_dir, 'region_n')
     out_dir = osp.join(data_dir, 'frame_feat')
     train_file = osp.join(dataset_dir, 'train.csv')
@@ -130,10 +144,12 @@ def main():
     val_list = get_video_list(val_file)
     test_list = get_video_list(test_file)
 
-    # np2h5(in_dir, out_dir, test_list, 'test')
-    # np2h5(in_dir, out_dir, val_list, 'val')
-    # np2h5(in_dir, out_dir, train_list, 'train')
+    # region features
+    np2h5(osp.join(data_dir, 'frames_test'), out_dir, test_list, 'test')
+    np2h5(osp.join(data_dir, 'frames_val'), out_dir, val_list, 'val')
+    np2h5(osp.join(data_dir, 'frames_train'), out_dir, train_list, 'train')
 
+    # appearance features
     h5filename = osp.join(out_dir, 'feat_appearance.h5')
     split_dataset_feat(h5filename, out_dir, train_list, val_list, test_list)
 
