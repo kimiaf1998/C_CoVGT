@@ -16,7 +16,8 @@ import numpy as np
 class VideoQADataset(Dataset):
     def __init__(
         self,
-        csv_path,
+        annotation_path,
+        annotation_file_type,
         features,
         qmax_words=20,
         amax_words=5,
@@ -36,8 +37,10 @@ class VideoQADataset(Dataset):
         :param a2id: answer to index mapping
         :param max_feats: maximum frames to sample from a video
         """
-        self.csv_path = csv_path
-        self.data = pd.read_csv(csv_path)
+        if annotation_file_type == "csv":
+            self.data = pd.read_csv(annotation_path)
+        elif annotation_file_type == "json":
+            self.data = pd.read_json(annotation_path)
         self.dset = self.csv_path.split('/')[-2]
         
         self.video_feature_path = features
