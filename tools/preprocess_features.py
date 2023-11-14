@@ -426,7 +426,7 @@ if __name__ == '__main__':
     # output
     parser.add_argument('--out', dest='outfile',
                         help='output filepath',
-                        default="../../data/STAR/appearance_feat/feat_{}.h5", type=str)
+                        default="../../data/STAR/frames_24fps_feat/appearance_feat/feat_{}.h5", type=str)
     # image sizes
     parser.add_argument('--num_clips', default=32, type=int)
     parser.add_argument('--image_height', default=112*2, type=int)
