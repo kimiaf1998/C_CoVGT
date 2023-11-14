@@ -85,7 +85,12 @@ class AModel(nn.Module):
             #multi-choice
             bs, nans, lans = answer.shape
             answer = answer.view(bs * nans, lans)
-            answer, hd_state = self.bert(answer)
+            answer, hd_state = self.bert(answer) #  answer is output tensor from the transformer containing the embeddings for each token in the input sequence.
+                                                 # shape: [batch_size, sequence_length, hidden_size]
+                                                 # hd_state is a summary vector representing the entire input sequence.
+                                                 # In many BERT-like models, corresponds to the special [CLS] token placed at the beginning of the sequence,
+                                                 # which is trained to capture the essence of the entire sequence for classification tasks.
+                                                 # shape: [batch_size, hidden_size].
             answer = self.linear_text(answer)
             answer_g = answer.mean(dim=1)
             # answer_g = answer[:, 0, :]
