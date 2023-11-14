@@ -489,8 +489,7 @@ if __name__ == '__main__':
 
     elif args.dataset == 'nextqa':
         args.video_list_file = '../datasets/nextqa/vlist.json' #obtained from train/val/test csv files
-        # args.video_dir = '../../data/nextqa/frames_test/' #extacted video frames, refer to extract_video.py
-        args.video_dir = '../../data/STAR/frames_24fps/' #extacted video frames, refer to extract_video.py
+        args.video_dir = '../../data/nextqa/frames_test/' #extacted video frames, refer to extract_video.py
         if args.model == 'resnet101':
             model = build_resnet()
         elif args.model == 'resnext101':
@@ -498,3 +497,14 @@ if __name__ == '__main__':
             args.image_height = 112
             args.image_width = 112
         generate_h5(model, args.video_dir, args.video_list_file, args.num_clips, args.outfile.format(args.feature_type))
+
+
+    elif args.dataset == 'star':
+        args.video_dir = '../../data/STAR/frames_24fps/' #extacted video frames, refer to extract_video.py
+        if args.model == 'resnet101':
+            model = build_resnet()
+        elif args.model == 'resnext101':
+            model = build_resnext()
+            args.image_height = 112
+            args.image_width = 112
+        generate_h5(model, args.video_dir, None, args.num_clips, args.outfile.format(args.feature_type))
