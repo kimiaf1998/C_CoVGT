@@ -52,6 +52,7 @@ def extract_frame(video, dst):
     with open(os.devnull, 'w') as ffmpeg_log:
         if os.path.exists(dst):
             # print(" cleanup: "+dst+"/")
+            return
             shutil.rmtree(dst)
         os.makedirs(dst)
         print("dst: ", dst)
