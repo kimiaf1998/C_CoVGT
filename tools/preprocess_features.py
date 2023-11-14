@@ -336,7 +336,8 @@ def generate_h5(model, v_path, v_file, num_clips, outfile):
         if not os.path.exists(args.dataset):
             os.makedirs(args.dataset)
     
-    vlist = load_file(v_file)
+    # vlist = load_file(v_file)
+    vlist = os.listdir(v_path)
     #vlist = [4624876965]
     dataset_size = len(vlist)
     print(dataset_size)
@@ -420,12 +421,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu_id', type=int, default=0, help='specify which gpu will be used')
     # dataset info
-    parser.add_argument('--dataset', default='nextqa', choices=['tgif-qa', 'msvd', 'star', 'msrvtt', 'nextqa','webvid', 'causalvid'], type=str)
+    parser.add_argument('--dataset', default='star', choices=['tgif-qa', 'msvd', 'star', 'msrvtt', 'nextqa','webvid', 'causalvid'], type=str)
     parser.add_argument('--question_type', default='none', choices=['frameqa', 'count', 'transition', 'action', 'none'], type=str)
     # output
     parser.add_argument('--out', dest='outfile',
                         help='output filepath',
-                        default="../../data/nextqa/feat_{}.h5", type=str)
+                        default="../../data/STAR/appearance_feat/feat_{}.h5", type=str)
     # image sizes
     parser.add_argument('--num_clips', default=32, type=int)
     parser.add_argument('--image_height', default=112*2, type=int)
@@ -488,7 +489,8 @@ if __name__ == '__main__':
 
     elif args.dataset == 'nextqa':
         args.video_list_file = '../datasets/nextqa/vlist.json' #obtained from train/val/test csv files
-        args.video_dir = '../../data/nextqa/frames_test/' #extacted video frames, refer to extract_video.py
+        # args.video_dir = '../../data/nextqa/frames_test/' #extacted video frames, refer to extract_video.py
+        args.video_dir = '../../data/STAR/frames_24fps/' #extacted video frames, refer to extract_video.py
         if args.model == 'resnet101':
             model = build_resnet()
         elif args.model == 'resnext101':
