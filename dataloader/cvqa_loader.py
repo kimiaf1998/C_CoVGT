@@ -41,7 +41,7 @@ class VideoQADataset(Dataset):
             self.data = pd.read_csv(annotation_path)
         elif annotation_file_type == "json":
             self.data = pd.read_json(annotation_path)
-        self.dset = self.csv_path.split('/')[-2]
+        self.dset = annotation_path.split('/')[-2]
         
         self.video_feature_path = features
         self.bbox_num = bnum
@@ -54,7 +54,7 @@ class VideoQADataset(Dataset):
         self.max_feats = max_feats
         self.mc = mc
         self.lvq = cl_loss
-        self.mode = osp.basename(csv_path).split('.')[0] #train, val or test
+        self.mode = osp.basename(annotation_path).split('.')[0] #train, val or test
         
         # self.all_answers = set(self.data['answer'])
         
@@ -63,8 +63,9 @@ class VideoQADataset(Dataset):
             self.all_questions = set(self.data['question'])
             self.ans_group, self.qsn_group = group(self.data, gt=False)
 
-        if self.dset == 'star':
-            self.vid_clips = load_file(osp.dirname(csv_path)+f'/clips_{self.mode}.json')
+        # Hannah: commenting this out since these clips files don't exist currently.
+        # if self.dset == 'star':
+        #     self.vid_clips = load_file(osp.dirname(annotation_path)+f'/clips_{self.mode}.json')
         
         if self.dset == 'causalvid':
             data_dir = osp.dirname(csv_path)
