@@ -359,7 +359,7 @@ def generate_h5(model, v_path, v_file, num_clips, outfile):
                 frame_list = sorted(os.listdir(video_path))
             except FileNotFoundError as e:
                 print(f"File not found: {e.filename}")
-            video_data = [np.asarray(Image.open(osp.join(video_path, img))) for img in frame_list]
+            video_data = [np.asarray(Image.open(osp.join(video_path, img)).transpose(2, 0, 1)) for img in frame_list]
 
             if args.feature_type == 'appearance':
                 clip_feat = []
@@ -369,6 +369,7 @@ def generate_h5(model, v_path, v_file, num_clips, outfile):
                 #     clip_feat.append(feats)
                 # t4 = time.time()
                 clips = np.asarray(video_data).squeeze()
+                print("video_data shape", clips.shape)
 
                 clips = torch.FloatTensor(clips).cuda().squeeze()
                 # print(clips.shape)
