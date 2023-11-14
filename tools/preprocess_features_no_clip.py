@@ -359,7 +359,7 @@ def generate_h5(model, v_path, v_file, num_clips, outfile):
                 frame_list = sorted(os.listdir(video_path))
             except FileNotFoundError as e:
                 print(f"File not found: {e.filename}")
-            video_data = [np.asarray(Image.open(osp.join(video_path, img)).transpose(2, 0, 1)) for img in frame_list]
+            video_data = [np.asarray(Image.open(osp.join(video_path, img))).transpose(2, 0, 1) for img in frame_list]
 
             if args.feature_type == 'appearance':
                 clip_feat = []
