@@ -11,9 +11,9 @@ import json
 
 ##################### TODO modify script variables #####################
 # Path of the STAR dataset file you want to convert
-INPUT_FILE_PATH = './data/dev/star/STAR_train.json'
+INPUT_FILE_PATH = './data/star/STAR_train.json'
 # File path to write output to
-OUTPUT_FILE_PATH = "./data/dev/star/tmp_output.json"
+OUTPUT_FILE_PATH = "./C_CoVGT/datasets/star/STAR_train_reformatted.json"
 ########################################################################
 
 OBJECT_CLASS_LOOKUP={}
@@ -113,10 +113,10 @@ def get_bboxes_of_action(object_str, situations, question_id, video_id):
             bboxes[key_frame] = bbox_of_action
         else:
             bboxes[key_frame] = None
-            if object_class not in bbox_labels:
-                print(f"{question_id}/{video_id}: bbox for {object_str} missing from key_frame {key_frame}.")
-            if PERSON_CLASS not in bbox_labels:
-                print(f"{question_id}/{video_id}: bbox for person missing from key_frame {key_frame}.")
+            # if object_class not in bbox_labels:
+            #     print(f"{question_id}/{video_id}: bbox for {object_str} missing from key_frame {key_frame}.")
+            # if PERSON_CLASS not in bbox_labels:
+            #     print(f"{question_id}/{video_id}: bbox for person missing from key_frame {key_frame}.")
     return bboxes
 
 def get_bboxes_of_object(object_str, situations, question_id):
@@ -142,7 +142,7 @@ def get_bboxes_of_object(object_str, situations, question_id):
             bboxes[key_frame] = bbox
         else:
             bboxes[key_frame] = None
-            print(f"{question_id}: Bbox for {object_str} missing from key_frame {key_frame}.")
+            # print(f"{question_id}: Bbox for {object_str} missing from key_frame {key_frame}.")
     return bboxes
 
 def get_bboxes_Interaction_T1(row):
@@ -187,8 +187,8 @@ def get_bboxes_Interaction_T3(row):
     Returns:
     dict: mapping of key frames to the bounding box
     """
-    pattern = re.compile(fr'What did the person do while they were {CONTACT_REL_REGEX}? the ({OBJECT_REGEX_PATTERN})?')
-    object = pattern.match(row["question"]).group(1)
+    pattern = re.compile(fr'{VERB_REGEX}? the ({OBJECT_REGEX_PATTERN})\.')
+    object = pattern.match(row["answer"]).group(1)
     return get_bboxes_of_action(object, row["situations"], row["question_id"], row["video_id"])
 
 def get_bboxes_Interaction_T4(row):
