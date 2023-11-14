@@ -384,7 +384,7 @@ def generate_h5(model, v_path, v_file, num_clips, outfile):
                     C, F, D = clip_feat.shape
                     feat_dset = fd.create_dataset('resnet_features', (dataset_size, C, F, D),
                                                   dtype=np.float32)
-                    video_ids_dset = fd.create_dataset('ids', shape=(dataset_size,), dtype=np.int32)
+                    video_ids_dset = fd.create_dataset('ids', shape=(dataset_size,), dtype=str)
             
             elif args.feature_type == 'motion':
                 if valid:
@@ -399,7 +399,7 @@ def generate_h5(model, v_path, v_file, num_clips, outfile):
                     C, D = clip_feat.shape
                     feat_dset = fd.create_dataset('resnext_features', (dataset_size, C, D),
                                                   dtype=np.float32)
-                    video_ids_dset = fd.create_dataset('ids', shape=(dataset_size,), dtype=str)
+                    video_ids_dset = fd.create_dataset('ids', shape=(dataset_size,), dtype=np.int32)
 
             i1 = i0 + 1
             feat_dset[i0:i1] = clip_feat
