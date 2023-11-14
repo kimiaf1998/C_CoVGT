@@ -403,7 +403,7 @@ def generate_h5(model, v_path, v_file, num_clips, outfile):
 
             i1 = i0 + 1
             feat_dset[i0:i1] = clip_feat
-            video_ids_dset[i0:i1] = int(vlist[i])
+            video_ids_dset[i0:i1] = vlist[i]
             i0 = i1
             _t['misc'].toc()
 
