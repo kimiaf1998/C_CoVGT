@@ -90,6 +90,41 @@ def run_batch(cur_batch, model):
 
     return feats
 
+def get_difference(list1, list2) -> list:
+    return [item for item in list1 if item not in list2]
+
+
+def find_dividers(lst: list, k: int) -> list:
+    if k == len(lst):
+        return lst
+
+    section_size = len(lst) // (k + 1)
+    divider_indices = [i * section_size for i in range(1, k + 1)]
+    divider_elements = [lst[index] for index in divider_indices]
+
+    return divider_elements
+
+def extract_clips_with_keyframes_included(path: str, num_clips: int, num_frames_per_clip:int, key_frames: list) -> (list, bool):
+    frame_count_out = num_clips * num_frames_per_clip
+    try:
+        frame_list = sorted(os.listdir(path))
+        if len(frame_list) == 0:
+            print("*** Empty video frames ***")
+        return None, False
+    except FileNotFoundError as e:
+        print(f"File not found: {e.filename}")
+
+    if frame_count_out >= len(key_frames):
+        k = frame_count_out - len(key_frames)
+        resp = [i for i in key_frames]
+        resp.extend(find_dividers(get_difference(frame_list, key_frames), k))
+        resp = sorted(resp)
+    else:
+        resp = find_dividers(key_frames, frame_count_out)
+
+    # extract output frames values
+    frame_list_out = [np.asarray(Image.open(osp.join(path, frame_no))) for frame_no in resp]
+    return np.asarray(frame_list_out).reshape(num_clips, num_frames_per_clip), True
 
 def extract_clips_with_consecutive_frames(path, num_clips, num_frames_per_clip):
     """
@@ -358,7 +393,7 @@ def generate_h5(model, v_path, v_file, num_clips, outfile):
             print("video id:", vlist[i])
             
             clips, valid = extract_clips_with_consecutive_frames(video_path, num_clips=num_clips, num_frames_per_clip=16)
-            
+
             nclip, nframe = 8, 4
             if args.feature_type == 'appearance':
                 clip_feat = []
