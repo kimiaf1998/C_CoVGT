@@ -103,12 +103,12 @@ def extract_videos(raw_dir, vlist, frame_dir, map_vid=None):
 
 
 def main():
-    dataset = 'STAR'
+    dataset = 'STAR_orig'
     video_dir = f'../../data/{dataset}/'
     raw_dir = osp.join(video_dir, 'videos/')
     frame_dir = osp.join(video_dir, 'frames/')
     anno_dir = f'../datasets/{dataset}/'
-    if dataset is not 'STAR':
+    if dataset is not 'STAR_orig':
         vlist_file = osp.join(anno_dir, 'vlist.json')
         map_file = osp.join(anno_dir, 'map_vid_vidorID.json')
         if not osp.exists(vlist_file):

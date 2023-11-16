@@ -90,42 +90,6 @@ def run_batch(cur_batch, model):
 
     return feats
 
-def get_difference(list1, list2) -> list:
-    return [item for item in list1 if item not in list2]
-
-
-def find_dividers(lst: list, k: int) -> list:
-    if k == len(lst):
-        return lst
-
-    section_size = len(lst) // (k + 1)
-    divider_indices = [i * section_size for i in range(1, k + 1)]
-    divider_elements = [lst[index] for index in divider_indices]
-
-    return divider_elements
-
-def extract_clips_with_keyframes_included(path: str, num_clips: int, num_frames_per_clip:int, key_frames: list) -> (list, bool):
-    frame_count_out = num_clips * num_frames_per_clip
-    try:
-        frame_list = sorted(os.listdir(path))
-        if len(frame_list) == 0:
-            print("*** Empty video frames ***")
-        return None, False
-    except FileNotFoundError as e:
-        print(f"File not found: {e.filename}")
-
-    if frame_count_out >= len(key_frames):
-        k = frame_count_out - len(key_frames)
-        resp = [i for i in key_frames]
-        resp.extend(find_dividers(get_difference(frame_list, key_frames), k))
-        resp = sorted(resp)
-    else:
-        resp = find_dividers(key_frames, frame_count_out)
-
-    # extract output frames values
-    frame_list_out = [np.asarray(Image.open(osp.join(path, frame_no))) for frame_no in resp]
-    return np.asarray(frame_list_out).reshape(num_clips, num_frames_per_clip), True
-
 def extract_clips_with_consecutive_frames(path, num_clips, num_frames_per_clip):
     """
     Args:
@@ -456,12 +420,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu_id', type=int, default=0, help='specify which gpu will be used')
     # dataset info
-    parser.add_argument('--dataset', default='star', choices=['tgif-qa', 'msvd', 'star', 'msrvtt', 'nextqa','webvid', 'causalvid'], type=str)
+    parser.add_argument('--dataset', default='STAR', choices=['tgif-qa', 'msvd', 'STAR', 'msrvtt', 'nextqa','webvid', 'causalvid'], type=str)
     parser.add_argument('--question_type', default='none', choices=['frameqa', 'count', 'transition', 'action', 'none'], type=str)
     # output
     parser.add_argument('--out', dest='outfile',
                         help='output filepath',
-                        default="../../data/STAR/frames_24fps_feat/appearance_feat/feat_{}.h5", type=str)
+                        default="../../data/STAR_orig/frames_24fps_feat/appearance_feat/feat_{}.h5", type=str)
     # image sizes
     parser.add_argument('--num_clips', default=32, type=int)
     parser.add_argument('--image_height', default=112*2, type=int)
@@ -534,7 +498,7 @@ if __name__ == '__main__':
         generate_h5(model, args.video_dir, args.video_list_file, args.num_clips, args.outfile.format(args.feature_type))
 
 
-    elif args.dataset == 'star':
+    elif args.dataset == 'STAR':
         args.video_dir = '../../data/STAR/frames_24fps/' #extacted video frames, refer to extract_video.py
         if args.model == 'resnet101':
             model = build_resnet()

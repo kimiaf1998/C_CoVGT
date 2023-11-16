@@ -418,7 +418,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu_id', type=int, default=0, help='specify which gpu will be used')
     # dataset info
-    parser.add_argument('--dataset', default='nextqa', choices=['tgif-qa', 'msvd', 'star', 'msrvtt', 'nextqa','webvid', 'causalvid'], type=str)
+    parser.add_argument('--dataset', default='nextqa', choices=['tgif-qa', 'msvd', 'STAR', 'msrvtt', 'nextqa','webvid', 'causalvid'], type=str)
     parser.add_argument('--question_type', default='none', choices=['frameqa', 'count', 'transition', 'action', 'none'], type=str)
     # output
     parser.add_argument('--out', dest='outfile',

@@ -54,7 +54,7 @@ class VideoQADataset(Dataset):
         self.max_feats = max_feats
         self.mc = mc
         self.lvq = cl_loss
-        self.mode = osp.basename(csv_path).split('.')[0] #train, val or test
+        self.mode = osp.basename(annotation_path).split('.')[0] #train, val or test
         
         # self.all_answers = set(self.data['answer'])
         
@@ -63,9 +63,9 @@ class VideoQADataset(Dataset):
             self.all_questions = set(self.data['question'])
             self.ans_group, self.qsn_group = group(self.data, gt=False)
 
-        if self.dset == 'star':
-            self.vid_clips = load_file(osp.dirname(csv_path)+f'/clips_{self.mode}.json')
-        
+        if self.dset == 'STAR':
+            self.vid_clips = load_file(osp.dirname(annotation_path)+f'/clips_{self.mode}.json')
+
         if self.dset == 'causalvid':
             data_dir = osp.dirname(csv_path)
             self.map_dir = load_file(osp.join(data_dir, 'map_dir_caul.json'))
@@ -81,7 +81,7 @@ class VideoQADataset(Dataset):
             #             tmp[new_label] = f[key][label][...]
             #         self.txt_obj[key] = tmp
 
-        if self.dset not in ['webvid', 'frameqa', 'star', 'causalvid']:
+        if self.dset not in ['webvid', 'frameqa', 'STAR', 'causalvid']:
             filen = bnum
             if self.dset == 'nextqa': filen = 20
             bbox_feat_file = osp.join(self.video_feature_path, f'region_feat_n/acregion_8c{filen}b_{self.mode}.h5')
@@ -94,10 +94,10 @@ class VideoQADataset(Dataset):
                 bboxes = fp['bbox']
                 for id, (vid, feat, bbox) in enumerate(zip(vids, feats, bboxes)):
                     #(clip, frame, bbox, feat), (clip, frame, bbox, coord)
-                    if self.dset == 'star': vid = vid.decode("utf-8")
+                    if self.dset == 'STAR': vid = vid.decode("utf-8")
                     self.bbox_feats[str(vid)] = (feat[:,:,:self.bbox_num, :], bbox[:,:,:self.bbox_num, :])
 
-        if self.dset not in ['webvid', 'star']:
+        if self.dset not in ['webvid', 'STAR']:
             if self.use_frame:
                 app_feat_file = osp.join(self.video_feature_path, f'frame_feat/app_feat_{self.mode}.h5')
                 print('Load {}...'.format(app_feat_file))
@@ -107,7 +107,7 @@ class VideoQADataset(Dataset):
                     feats = fp['resnet_features']
                     print(feats.shape) #v_num, clip_num, feat_dim
                     for id, (vid, feat) in enumerate(zip(vids, feats)):
-                        if self.dset in ['star','causalvid']: vid = vid.decode("utf-8")
+                        if self.dset in ['STAR','causalvid']: vid = vid.decode("utf-8")
                         self.frame_feats[str(vid)] = feat
 
 
@@ -178,27 +178,44 @@ class VideoQADataset(Dataset):
 
     def get_video_feat_star(self, video_name, qid, width=320, height=240):
         clips = self.vid_clips[qid]
-        video_feature_path = f'/raid/jbxiao/data/star/'
+        video_feature_path = f'/raid/jbxiao/data/STAR/'
         app_feats = []
         roi_feats, roi_bboxs = [], []
+        # TODO
+        if self.use_frame:
+            app_feat_file = osp.join(video_feature_path, f'frame_feat/app_feat_{self.mode}.h5')
+            print('Load {}...'.format(app_feat_file))
+            self.frame_feats = {}
+            with h5py.File(app_feat_file, 'r') as fp:
+                vids = fp['ids']
+                frame_feat = fp['resnet_features']
+                print(frame_feat.shape)  # v_num, clip_num, feat_dim
+                # for id, (vid, feat) in enumerate(zip(vids, feats)):
+                #     vid = vid.decode("utf-8")
+                #     self.frame_feats[str(vid)] = feat
+
         for cid, clip in enumerate(clips):
             clip_feat, clip_rfeat, clip_rbbox = [], [], []
             for fid in clip:
-                frame_feat_file = osp.join(video_feature_path, f'frame_feat/{video_name}/{fid:06d}.npy')
-                frame_feat = np.load(frame_feat_file)
-                clip_feat.append(frame_feat)
+                # frame_feat_file = osp.join(video_feature_path, f'frame_feat/{video_name}/{fid:06d}.npy')
+                # frame_feat = np.load(frame_feat_file)
+                # clip_feat.append(frame_feat)
 
                 region_feat_file = osp.join(video_feature_path, f'bbox/{video_name}/{fid:06d}.npz')
                 region_feat = np.load(region_feat_file)
                 clip_rfeat.append(region_feat['x'])
                 clip_rbbox.append(region_feat['bbox'])
-            app_feats.append(clip_feat)
-            feats = np.asarray(clip_rfeat)
+            # app_feats.append(clip_feat)
+            # feats = np.asarray(clip_rfeat)
+            # TODO
+            clip_feats = np.asarray(frame_feat)[cid]
             bboxes = np.asarray(clip_rbbox)
-            vid_feat_aln, vid_bbox_aln = align(feats, bboxes, video_name, cid)
+            vid_feat_aln, vid_bbox_aln = align(clip_feats, bboxes, video_name, cid)
             roi_feats.append(vid_feat_aln)
             roi_bboxs.append(vid_bbox_aln)
-        frame_feat = np.asarray(app_feats)
+        # frame_feat = np.asarray(app_feats)
+
+        frame_feat = np.asarray(frame_feat)
         app_feats = torch.from_numpy(frame_feat).type(torch.float32)
 
         roi_feats = np.asarray(roi_feats)
@@ -227,7 +244,7 @@ class VideoQADataset(Dataset):
             width, height = cur_sample['width'], cur_sample['height']
         if self.dset == 'webvid':
             video_o, video_f = self.get_video_feat(vid_id, width, height)
-        elif self.dset == 'star':
+        elif self.dset == 'STAR':
             video_o, video_f = self.get_video_feat_star(vid_id, qid, width, height)
         else:
             video_o, video_f = self.get_video_feature(vid_id, width, height)
