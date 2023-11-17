@@ -541,6 +541,9 @@ if __name__ == '__main__':
         elif args.model == 'resnext101':
             model = build_resnext()
             args.image_height = 112
+
+
+
             args.image_width = 112
         generate_h5(model, args.video_dir, args.video_list_file, args.num_clips, args.outfile.format(args.feature_type))
 
