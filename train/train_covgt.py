@@ -110,16 +110,16 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
     )
     for i, batch in enumerate(train_loader):
         answer_id, answer, video_o, video_f, question, seg_feats, seg_num, qsn_id, qsn_token_ids, qsn_seq_len = (
-            batch["answer_id"],
-            batch["answer"],
-            batch["video_o"].cuda(),
-            batch["video_f"].cuda(),
-            batch["question"].cuda(),
-            batch['seg_feats'].cuda(),
-            batch['seg_num'],
-            batch['qsn_id'],
-            batch['qsn_token_ids'],
-            batch['qsn_seq_len']
+            batch["answer_id"],         # answer id among a choices
+            batch["answer"],            # answers (qsn + answers (choices)) token ids
+            batch["video_o"].cuda(),    # region feats
+            batch["video_f"].cuda(),    # appearance feats
+            batch["question"].cuda(),   # qsns embeddings (open-ended)
+            batch['seg_feats'].cuda(),  # answers feats (mc, amax words, 2048)
+            batch['seg_num'],           # mc
+            batch['qsn_id'],            # qsn id among q choice (used for contrastive learning)
+            batch['qsn_token_ids'],     # qsns token ids
+            batch['qsn_seq_len']        # length of qsns token ids
         )
         
         video_len = batch["video_len"]
