@@ -134,7 +134,7 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
         
         video = (video_o, video_f)
         N = answer_id.size(0)
-        seq_len = batch["seq_len"]
+        seq_len = batch["seq_len"]  # length of answers token ids
         if not args.mc:
             model.module._compute_answer_embedding(a2v)
             predicts = model(
@@ -154,9 +154,10 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
                 seq_len = seq_len,
                 seg_feats = seg_feats,
                 seg_num = seg_num
-            )
+            )   # outputs video and answer representation
                     
             fusion_proj = fusion_proj.unsqueeze(2)
+            # Calculates dot-product or video and answer repr. to find the best match
             predicts = torch.bmm(answer_proj, fusion_proj).squeeze()
 
         if args.dataset == "ivqa":
