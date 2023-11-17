@@ -26,7 +26,7 @@ def get_args():
             "howtovqa",
             "how2qa",
             "nextqa",
-            "star",
+            "STAR",
             "tgifqa/transition",
             "tgifqa/action",
             "tgifqa/frameqa",

@@ -90,6 +90,7 @@ def run_batch(cur_batch, model):
 
     return feats
 
+<<<<<<< HEAD
 def get_difference(list1, list2) -> list:
     return [item for item in list1 if item not in list2]
 
@@ -126,6 +127,8 @@ def extract_clips_with_keyframes_included(path: str, num_clips: int, num_frames_
     frame_list_out = [np.asarray(Image.open(osp.join(path, frame_no))) for frame_no in resp]
     return np.asarray(frame_list_out).reshape(num_clips, num_frames_per_clip), True
 
+=======
+>>>>>>> 25819ded1b0d04e5627eada7a646367d93dd5805
 def extract_clips_with_consecutive_frames(path, num_clips, num_frames_per_clip):
     """
     Args:
@@ -456,12 +459,20 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu_id', type=int, default=0, help='specify which gpu will be used')
     # dataset info
+<<<<<<< HEAD
     parser.add_argument('--dataset', default='star', choices=['tgif-qa', 'msvd', 'star', 'msrvtt', 'nextqa','webvid', 'causalvid'], type=str)
+=======
+    parser.add_argument('--dataset', default='STAR', choices=['tgif-qa', 'msvd', 'STAR', 'msrvtt', 'nextqa','webvid', 'causalvid'], type=str)
+>>>>>>> 25819ded1b0d04e5627eada7a646367d93dd5805
     parser.add_argument('--question_type', default='none', choices=['frameqa', 'count', 'transition', 'action', 'none'], type=str)
     # output
     parser.add_argument('--out', dest='outfile',
                         help='output filepath',
+<<<<<<< HEAD
                         default="../../data/STAR/frames_24fps_feat/appearance_feat/feat_{}.h5", type=str)
+=======
+                        default="../../data/STAR_orig/frames_24fps_feat/appearance_feat/feat_{}.h5", type=str)
+>>>>>>> 25819ded1b0d04e5627eada7a646367d93dd5805
     # image sizes
     parser.add_argument('--num_clips', default=32, type=int)
     parser.add_argument('--image_height', default=112*2, type=int)
@@ -534,7 +545,11 @@ if __name__ == '__main__':
         generate_h5(model, args.video_dir, args.video_list_file, args.num_clips, args.outfile.format(args.feature_type))
 
 
+<<<<<<< HEAD
     elif args.dataset == 'star':
+=======
+    elif args.dataset == 'STAR':
+>>>>>>> 25819ded1b0d04e5627eada7a646367d93dd5805
         args.video_dir = '../../data/STAR/frames_24fps/' #extacted video frames, refer to extract_video.py
         if args.model == 'resnet101':
             model = build_resnet()

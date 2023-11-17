@@ -10,10 +10,10 @@ import json
 
 
 ##################### TODO modify script variables #####################
-# Path of the STAR dataset file you want to convert
-INPUT_FILE_PATH = './data/star/STAR_train.json'
+# Path of the STAR_orig dataset file you want to convert
+INPUT_FILE_PATH = './data/STAR/STAR_train.json'
 # File path to write output to
-OUTPUT_FILE_PATH = "./C_CoVGT/datasets/star/STAR_train_reformatted.json"
+OUTPUT_FILE_PATH = "./C_CoVGT/datasets/STAR/STAR_train_reformatted.json"
 ########################################################################
 
 OBJECT_CLASS_LOOKUP={}
@@ -24,7 +24,7 @@ CONTACT_REL_REGEX = r'.+'
 PERSON_CLASS = "o000"
 
 def load_object_class_lookup():
-    file_path = './data/star/classes/object_classes.txt'
+    file_path = './data/STAR/classes/object_classes.txt'
 
     # Read the contents of the file and split lines
     with open(file_path, 'r') as file:
