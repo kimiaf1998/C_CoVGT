@@ -531,10 +531,9 @@ def main():
         result["end"] = row["end"]
         result["question"] = row["question"]
         result["answer"] = row["answer"]
+        result["choices"] = [{'choice_id': choice['choice_id'], 'choice': choice['choice']} for choice in row["choices"]]
 
         # get the bounding box of the answer
-        if row["question_id"] == "Feasibility_T2_69":
-            print("hi")
         if row["question_id"].startswith("Interaction_T1"):
             result["bboxes"] = get_bboxes_Interaction_T1(row)
         elif row["question_id"].startswith("Interaction_T2"):
