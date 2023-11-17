@@ -178,16 +178,16 @@ class VideoQADataset(Dataset):
 
     def get_video_feat_star(self, video_name, qid, width=320, height=240):
         clips = self.vid_clips[qid]
-        video_feature_path = f'/raid/jbxiao/data/STAR/'
+        video_feature_path = '../data/STAR/frames_24fps'
         app_feats = []
         roi_feats, roi_bboxs = [], []
         # TODO
         if self.use_frame:
-            app_feat_file = osp.join(video_feature_path, f'frame_feat/app_feat_{self.mode}.h5')
+            app_feat_file = osp.join(video_feature_path, f'frames_24fps_feat/appearance_feat/app_feat_{self.mode}.h5')
             print('Load {}...'.format(app_feat_file))
             self.frame_feats = {}
             with h5py.File(app_feat_file, 'r') as fp:
-                vids = fp['ids']
+                qids = fp['qids']
                 frame_feat = fp['resnet_features']
                 print(frame_feat.shape)  # v_num, clip_num, feat_dim
                 # for id, (vid, feat) in enumerate(zip(vids, feats)):
@@ -201,7 +201,7 @@ class VideoQADataset(Dataset):
                 # frame_feat = np.load(frame_feat_file)
                 # clip_feat.append(frame_feat)
 
-                region_feat_file = osp.join(video_feature_path, f'bbox/{video_name}/{fid:06d}.npz')
+                region_feat_file = osp.join(video_feature_path, f'region_feat_n/{video_name}/{video_name}-{fid:06d}.npz')
                 region_feat = np.load(region_feat_file)
                 clip_rfeat.append(region_feat['x'])
                 clip_rbbox.append(region_feat['bbox'])
@@ -323,7 +323,7 @@ class VideoQADataset(Dataset):
                 choices = [str(cur_sample["a" + str(i)]) for i in range(self.mc)]
                 answer_id = choices.index(ans) if ans in choices else -1
 
-                if self.mode not in ['val', 'test'] and rd.random() < 0.3:
+                if self.mode not in ['val', 'test'] and rd.random() < 0.3
                     #add randomness to negative answers
                     qtype = cur_sample['type']
                     if qtype == 'TP': qtype = 'TN'
