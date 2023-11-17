@@ -54,7 +54,7 @@ class VideoQADataset(Dataset):
         self.max_feats = max_feats
         self.mc = mc
         self.lvq = cl_loss
-        self.mode = osp.basename(csv_path).split('.')[0] #train, val or test
+        self.mode = osp.basename(annotation_path).split('.')[0] #train, val or test
         
         # self.all_answers = set(self.data['answer'])
         
@@ -293,7 +293,7 @@ class VideoQADataset(Dataset):
                 qtype = str(cur_sample["type"])   
                 question_id = vid_id +'_'+qtype      
             
-            if self.dset=='webvid': # and self.mode == 'train':
+            elif self.dset=='webvid': # and self.mode == 'train':
                 ans = cur_sample["answer"]
                 cand_answers = self.all_answers
                 choices = rd.sample(cand_answers, self.mc-1)
@@ -301,6 +301,12 @@ class VideoQADataset(Dataset):
                 rd.shuffle(choices)
                 answer_id = choices.index(ans)
                 answer_txts = choices
+            elif self.dset == 'STAR':
+                ans = cur_sample['answer']
+                choices = [str(cur_sample['choices'][i]['choice']) for i in range(self.mc)]
+                answer_id = choices.index(ans) if ans in choices else -1
+                question_id = cur_sample['question_id']
+
             else:
                 ans = cur_sample['answer']
                 choices = [str(cur_sample["a" + str(i)]) for i in range(self.mc)]
