@@ -9,7 +9,7 @@ import os
 #############################################################################
 # TODO: update these parameters
 #############################################################################
-question_id = "Interaction_T1_4"
+# question_id = "Interaction_T1_4"
 # video_id = "TJZ0P"
 question_id = "Interaction_T1_9"
 video_id = "DUZDL"
