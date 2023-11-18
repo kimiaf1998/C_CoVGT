@@ -13,7 +13,8 @@ import json
 # Path of the STAR_orig dataset file you want to convert
 INPUT_FILE_PATH = './data/STAR/STAR_train.json'
 # File path to write output to
-OUTPUT_FILE_PATH = "./C_CoVGT/datasets/STAR/STAR_train_reformatted.json"
+
+OUTPUT_FILE_PATH = "./C_CoVGT/datasets/star/train_updated_frame_number.json"
 ########################################################################
 
 OBJECT_CLASS_LOOKUP={}
@@ -36,6 +37,12 @@ def load_object_class_lookup():
         (object_class, object_string) = line.split()
         OBJECT_CLASS_LOOKUP[object_string] = object_class
         OBJECT_NAME_LOOKUP[object_class] = object_string
+
+def load_vid_fps_lookup():
+    file_path = './C_CoVGT/datasets/star/vid_fps_mapping.json'
+    # Reading the dictionary from the JSON file
+    with open(file_path, 'r') as file:
+        return json.load(file)
 
 def calculate_intersection(box1, box2):
     """
@@ -514,6 +521,55 @@ def get_bboxes_Feasibility_T6(row):
     object = pattern.match(row["answer"]).group(1)
     return get_bboxes_of_action(object, row["situations"], row["question_id"], row["video_id"])
 
+def update_frame_numbers_using_new_framerate(row, new_fps=3):
+    """
+    Map a frame number using the original framerate to the corresponding frame number
+    when using a fixed framerate (defaults to 3 fps).
+
+    For example, if a video framerate was orginally 24.5 fps, frame 49 would correspond
+    to the 2 second mark in the video (49 frames/24.5 fps = 2 seconds).
+    The corresponding frame for the video with framerate 3 fps would be 
+    3 fps * 2 seconds = frame 6.
+    Therefore, frame 49 with the original framerate corresponds to frame 6 with a 
+    framerate of 3 fps.
+    
+    For any video and frame, let k = keyframe number (e.g. 49) and let 
+    f = original fps of the video (e.g. 24.5).
+    The corresponding frame number at 3 fps = k / f * 3
+    """
+    new_frame_number_to_bboxes = {}
+    for frame_number, bbox in row["bboxes"].items():
+        if bbox == None:
+            continue
+        new_frame_number = int(frame_number) / VID_FPS_LOOKUP[row["video_id"]] * new_fps
+        # fractions of a frame (e.g. 26.55) don't exist so round to 
+        # nearest whole frame number (e.g. 27)
+        rounded_frame_number = round(new_frame_number)
+        formatted_frame_number = str(rounded_frame_number).zfill(6)
+        # add to dict
+        if formatted_frame_number in new_frame_number_to_bboxes:
+            new_frame_number_to_bboxes[formatted_frame_number].append(bbox)
+        else:
+            new_frame_number_to_bboxes[formatted_frame_number] = [bbox]
+    
+    # When multiple frames from the original framerate are mapped to the same frame 
+    # using 3fps (e.g. frame 245, 244 at 30fps are both mapped to frame 24 at 3fps),
+    # take the average of the bounding boxes
+    new_frame_number_to_avg_bbox = {}
+    for frame_number, bboxes in new_frame_number_to_bboxes.items():
+        num_bboxes = len(bboxes)
+        avg_bbox = [0, 0, 0, 0]
+        for bbox in bboxes:
+            avg_bbox[0] += bbox[0]
+            avg_bbox[1] += bbox[1]
+            avg_bbox[2] += bbox[2]
+            avg_bbox[3] += bbox[3]
+        avg_bbox = [value / num_bboxes for value in avg_bbox]
+        new_frame_number_to_avg_bbox[frame_number] = avg_bbox
+        
+    # replace with new frame numbers    
+    row["bboxes"] = new_frame_number_to_avg_bbox
+
 def main():
     results = []
 
@@ -531,10 +587,9 @@ def main():
         result["end"] = row["end"]
         result["question"] = row["question"]
         result["answer"] = row["answer"]
+        result["choices"] = [{'choice_id': choice['choice_id'], 'choice': choice['choice']} for choice in row["choices"]]
 
         # get the bounding box of the answer
-        if row["question_id"] == "Feasibility_T2_69":
-            print("hi")
         if row["question_id"].startswith("Interaction_T1"):
             result["bboxes"] = get_bboxes_Interaction_T1(row)
         elif row["question_id"].startswith("Interaction_T2"):
@@ -577,10 +632,14 @@ def main():
             result["bboxes"] = get_bboxes_Feasibility_T6(row)
         results.append(result)
 
+        update_frame_numbers_using_new_framerate(result, fps=3)
+
     # Write the results to a JSON file
     with open(OUTPUT_FILE_PATH, 'w') as json_file:
         json.dump(results, json_file, indent=2)  # indent parameter for pretty formatting
 
+# load mapping of (video id -> fps) e.g. {'R3O7U': 29.97003, ..}
+VID_FPS_LOOKUP=load_vid_fps_lookup()
 main()
 
 # Notes:

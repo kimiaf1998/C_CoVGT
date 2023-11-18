@@ -718,7 +718,7 @@ class VGT(nn.Module):
                 
             if fusion_proj is not None and answer_g.device != fusion_proj.device:
                 answer_g = answer_g.to(fusion_proj.device)
-            if answer is not None:
+            if answer is not None:  # mc , answer is a list of tokens
                 return fusion_proj, answer_g
                 # return self.final_proj(fusion_proj*answer_g), answer_g
             else:

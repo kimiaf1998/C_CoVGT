@@ -29,7 +29,8 @@ class VideoQADataset(Dataset):
         cl_loss=0
     ):
         """
-        :param csv_path: path to a csv containing columns video_id, question, answer
+        :param annotation_path: path to a data file containing columns video_id, question, answer
+        :param annotation_file_type: csv or json
         :param features: dictionary mapping video_id to torch tensor of features
         :param qmax_words: maximum number of words for a question
         :param amax_words: maximum number of words for an answer
@@ -41,7 +42,7 @@ class VideoQADataset(Dataset):
             self.data = pd.read_csv(annotation_path)
         elif annotation_file_type == "json":
             self.data = pd.read_json(annotation_path)
-        self.dset = self.csv_path.split('/')[-2]
+        self.dset = annotation_path.split('/')[-2]
         
         self.video_feature_path = features
         self.bbox_num = bnum
@@ -67,7 +68,7 @@ class VideoQADataset(Dataset):
             self.vid_clips = load_file(osp.dirname(annotation_path)+f'/clips_{self.mode}.json')
 
         if self.dset == 'causalvid':
-            data_dir = osp.dirname(csv_path)
+            data_dir = osp.dirname(annotation_path)
             self.map_dir = load_file(osp.join(data_dir, 'map_dir_caul.json'))
             # vids = pkload(osp.join(data_dir, f'split/{self.mode}.pkl'))
             # self.txt_obj = {}
