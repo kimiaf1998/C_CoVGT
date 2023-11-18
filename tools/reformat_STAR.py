@@ -631,7 +631,7 @@ def main():
             result["bboxes"] = get_bboxes_Feasibility_T6(row)
         results.append(result)
 
-        update_frame_numbers_using_new_framerate(result, fps=3)
+        update_frame_numbers_using_new_framerate(result, new_fps=3)
 
     # Write the results to a JSON file
     with open(OUTPUT_FILE_PATH, 'w') as json_file:
