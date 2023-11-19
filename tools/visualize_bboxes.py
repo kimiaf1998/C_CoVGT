@@ -13,7 +13,7 @@ import os
 # video_id = "TJZ0P"
 question_id = "Interaction_T1_5568"
 video_id = "XSS0J"
-path_to_videos = "/media/hdd1/kimia_data/datasets/star/frames_3fps/"
+path_to_videos = "/media/hdd1/kimia_data/datasets/star/"
 # Output directory. The frames with the bounding boxes will be saved here
 output_dir = "/media/hdd1/kimia_data/datasets/star/dev"
 #############################################################################
