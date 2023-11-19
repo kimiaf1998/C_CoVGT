@@ -545,8 +545,8 @@ class VGT(nn.Module):
         video_f = self.norm_video(video_f) #(bs, numc, numf, dmodel)
         
 
-        bsize, numc, numf, numr, fdim = video_o.size()
-        bsize_lan, len_lan, dim_lan = language.size()
+        bsize, numc, numf, numr, fdim = video_o.size()  # (bsize, n clips,n frames, n regions, feat dim)
+        bsize_lan, len_lan, dim_lan = language.size()   # (bsize * n answers, seq len, hidden dim)
         ans_n = bsize_lan // bsize
        
         X = self.encode_vid(video_o) #(bs, numc*numf, numr, dmodel)
@@ -574,12 +574,13 @@ class VGT(nn.Module):
         X_o = self.gnn(X, A)
         X_o += X
         
-        satt = self.satt_pool(X_o)
+        satt = self.satt_pool(X_o)  # self-attention to aggregate graph node at each frame
         X_o = torch.sum(X_o*satt, dim=-2)
         # X_o = X.mean(dim=-2)
 
         X_o = X_o.view(bsize, numc, numf, -1)
-        
+
+        # obtain clip-level feature reps (pooling)
         video = self.merge_fr(torch.cat([video_f, X_o], dim=-1))
         # video = X_o
         #########cross-model interaction##############

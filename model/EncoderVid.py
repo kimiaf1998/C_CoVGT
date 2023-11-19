@@ -20,13 +20,10 @@ class EncoderVid(nn.Module):
         
         super(EncoderVid, self).__init__()
         self.dim_feat = feat_dim
-        self.dim_bbox = bbox_dim
+        self.dim_bbox = bbox_dim    # num regions
         self.dim_hidden = feat_hidden
         self.input_dropout_p = input_dropout_p
 
-        input_dim = feat_dim
-
-        input_dim += pos_hidden
         self.bbox_conv = nn.Sequential(
             nn.Conv2d(self.dim_bbox, pos_hidden, kernel_size=1),
             nn.BatchNorm2d(pos_hidden),
@@ -46,13 +43,6 @@ class EncoderVid(nn.Module):
         #     nn.ELU(inplace=True)
         # )
 
-        # self.roi_conv = nn.Sequential(
-        #     nn.Conv2d(4, 4, kernel_size=1),
-        #     nn.BatchNorm2d(4),
-        #     nn.ReLU(),
-        # )
-
-
     def forward(self, video_o):
         
         bsize, numc, numf, numr, fdim =  video_o.shape
@@ -63,6 +53,7 @@ class EncoderVid(nn.Module):
         
         bbox_pos = self.bbox_conv(roi_bbox.permute(
             0, 3, 1, 2)).permute(0, 2, 3, 1)
+        # bsize, fdim, numc*numf, numr => bsize, numc*numf, numr, pos_hidden
  
         bbox_features = torch.cat([roi_feat, bbox_pos], dim=-1)
 

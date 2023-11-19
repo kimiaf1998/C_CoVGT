@@ -179,44 +179,27 @@ class VideoQADataset(Dataset):
 
     def get_video_feat_star(self, video_name, qid, width=320, height=240):
         clips = self.vid_clips[qid]
-        video_feature_path = '../data/STAR/frames_24fps'
+        video_feature_path = f'../data/star/pre_features'
         app_feats = []
         roi_feats, roi_bboxs = [], []
-        # TODO
-        if self.use_frame:
-            app_feat_file = osp.join(video_feature_path, f'frames_24fps_feat/appearance_feat/app_feat_{self.mode}.h5')
-            print('Load {}...'.format(app_feat_file))
-            self.frame_feats = {}
-            with h5py.File(app_feat_file, 'r') as fp:
-                qids = fp['qids']
-                frame_feat = fp['resnet_features']
-                print(frame_feat.shape)  # v_num, clip_num, feat_dim
-                # for id, (vid, feat) in enumerate(zip(vids, feats)):
-                #     vid = vid.decode("utf-8")
-                #     self.frame_feats[str(vid)] = feat
-
         for cid, clip in enumerate(clips):
             clip_feat, clip_rfeat, clip_rbbox = [], [], []
             for fid in clip:
-                # frame_feat_file = osp.join(video_feature_path, f'frame_feat/{video_name}/{fid:06d}.npy')
-                # frame_feat = np.load(frame_feat_file)
-                # clip_feat.append(frame_feat)
+                frame_feat_file = osp.join(video_feature_path, f'frame_feat/{video_name}/{fid:06d}.npy')
+                frame_feat = np.load(frame_feat_file)
+                clip_feat.append(frame_feat)
 
-                region_feat_file = osp.join(video_feature_path, f'region_feat_n/{video_name}/{video_name}-{fid:06d}.npz')
+                region_feat_file = osp.join(video_feature_path, f'bbox/{video_name}/{fid:06d}.npz')
                 region_feat = np.load(region_feat_file)
                 clip_rfeat.append(region_feat['x'])
                 clip_rbbox.append(region_feat['bbox'])
-            # app_feats.append(clip_feat)
-            # feats = np.asarray(clip_rfeat)
-            # TODO
-            clip_feats = np.asarray(frame_feat)[cid]
+            app_feats.append(clip_feat)
+            feats = np.asarray(clip_rfeat)
             bboxes = np.asarray(clip_rbbox)
-            vid_feat_aln, vid_bbox_aln = align(clip_feats, bboxes, video_name, cid)
+            vid_feat_aln, vid_bbox_aln = align(feats, bboxes, video_name, cid)
             roi_feats.append(vid_feat_aln)
             roi_bboxs.append(vid_bbox_aln)
-        # frame_feat = np.asarray(app_feats)
-
-        frame_feat = np.asarray(frame_feat)
+        frame_feat = np.asarray(app_feats)
         app_feats = torch.from_numpy(frame_feat).type(torch.float32)
 
         roi_feats = np.asarray(roi_feats)
@@ -231,6 +214,61 @@ class VideoQADataset(Dataset):
         # print(region_feats.shape, app_feats.shape)
 
         return region_feats, app_feats
+
+    # def get_video_feat_star(self, video_name, qid, width=320, height=240):
+    #     clips = self.vid_clips[qid]
+    #     video_feature_path = '../data/STAR/frames_24fps'
+    #     app_feats = []
+    #     roi_feats, roi_bboxs = [], []
+    #     # TODO
+    #     if self.use_frame:
+    #         app_feat_file = osp.join(video_feature_path, f'frames_24fps_feat/appearance_feat/app_feat_{self.mode}.h5')
+    #         print('Load {}...'.format(app_feat_file))
+    #         self.frame_feats = {}
+    #         with h5py.File(app_feat_file, 'r') as fp:
+    #             qids = fp['qids']
+    #             frame_feat = fp['resnet_features']
+    #             print(frame_feat.shape)  # v_num, clip_num, feat_dim
+    #             # for id, (vid, feat) in enumerate(zip(vids, feats)):
+    #             #     vid = vid.decode("utf-8")
+    #             #     self.frame_feats[str(vid)] = feat
+    #
+    #     for cid, clip in enumerate(clips):
+    #         clip_feat, clip_rfeat, clip_rbbox = [], [], []
+    #         for fid in clip:
+    #             # frame_feat_file = osp.join(video_feature_path, f'frame_feat/{video_name}/{fid:06d}.npy')
+    #             # frame_feat = np.load(frame_feat_file)
+    #             # clip_feat.append(frame_feat)
+    #
+    #             region_feat_file = osp.join(video_feature_path, f'region_feat_n/{video_name}/{video_name}-{fid:06d}.npz')
+    #             region_feat = np.load(region_feat_file)
+    #             clip_rfeat.append(region_feat['x'])
+    #             clip_rbbox.append(region_feat['bbox'])
+    #         # app_feats.append(clip_feat)
+    #         # feats = np.asarray(clip_rfeat)
+    #         # TODO
+    #         clip_feats = np.asarray(frame_feat)[cid]
+    #         bboxes = np.asarray(clip_rbbox)
+    #         vid_feat_aln, vid_bbox_aln = align(clip_feats, bboxes, video_name, cid)
+    #         roi_feats.append(vid_feat_aln)
+    #         roi_bboxs.append(vid_bbox_aln)
+    #     # frame_feat = np.asarray(app_feats)
+    #
+    #     frame_feat = np.asarray(frame_feat)
+    #     app_feats = torch.from_numpy(frame_feat).type(torch.float32)
+    #
+    #     roi_feats = np.asarray(roi_feats)
+    #     roi_feats = torch.from_numpy(roi_feats).type(torch.float32)
+    #
+    #     roi_bboxs = np.asarray(roi_bboxs)
+    #     bbox_feats = transform_bb(roi_bboxs, width, height)
+    #     bbox_feats = torch.from_numpy(bbox_feats).type(torch.float32)
+    #
+    #     region_feats = torch.cat((roi_feats, bbox_feats), dim=-1)
+    #
+    #     # print(region_feats.shape, app_feats.shape)
+    #
+    #     return region_feats, app_feats
 
     def __getitem__(self, index):
         
