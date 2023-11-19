@@ -1,7 +1,7 @@
 """
 Script to visualize the bounding boxes for a given question ID and video ID.
 """
-from moviepy.editor import VideoFileClip
+# from moviepy.editor import VideoFileClip
 import cv2
 import pandas as pd
 import os
@@ -24,10 +24,10 @@ def draw_bounding_boxes(question_id, video_id, path_to_videos, output_dir):
     os.makedirs(write_dir, exist_ok=True)
     
     # Path to the input video
-    video_path = f'{path_to_videos}/{video_id}.mp4'
+    video_path = f'{path_to_videos}/{video_id}'
 
     # Load the video clip
-    video_clip = VideoFileClip(video_path)
+    # video_clip = VideoFileClip(video_path)
 
     # Get the frames and the bounding boxes
     df = pd.read_json('../datasets/star/train_updated_frame_number.json')
@@ -39,14 +39,15 @@ def draw_bounding_boxes(question_id, video_id, path_to_videos, output_dir):
         frame_time = frame_num / 3
 
         # Save the extracted frame as an image file
-        extracted_frame_filename = f'{video_id}_frame_{frame_num}.jpg'
-        output_path = os.path.join(write_dir, extracted_frame_filename)
-        video_clip.save_frame(output_path, t=frame_time)
-
-        print(f"Frame at {frame_time} seconds extracted and saved as {extracted_frame_filename}")
+        # extracted_frame_filename = f'{video_id}_frame_{frame_num}.jpg'
+        # output_path = os.path.join(write_dir, extracted_frame_filename)
+        output_path = os.path.join(write_dir, f'{frame_time:06d}.png')
+        # video_clip.save_frame(output_path, t=frame_time)
+        #
+        print(f"Frame at {frame_time} seconds extracted and saved as {os.path.join(video_path, f'{frame_time:06d}')}")
 
         # Load the frame
-        image = cv2.imread(output_path)
+        image = cv2.imread(os.path.join(video_path, f'{frame_time:06d}'))
 
         # Draw the bounding box on the image
         start_point = (int(bbox[0]), int(bbox[1]))
@@ -58,7 +59,7 @@ def draw_bounding_boxes(question_id, video_id, path_to_videos, output_dir):
         # Save the image with the bounding box
         cv2.imwrite(output_path, image_with_bbox)
 
-        print(f"Bounding box drawn on {extracted_frame_filename}")
+        # print(f"Bounding box drawn on {extracted_frame_filename}")
     # Close the video clip
     video_clip.close()
 
