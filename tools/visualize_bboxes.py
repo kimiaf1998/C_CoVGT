@@ -11,8 +11,8 @@ import os
 #############################################################################
 # question_id = "Interaction_T1_4"
 # video_id = "TJZ0P"
-question_id = "Interaction_T1_5568"
-video_id = "XSS0J"
+question_id = "Interaction_T1_5590"
+video_id = "OJ4IE"
 path_to_videos = "../../data/star"
 # Output directory. The frames with the bounding boxes will be saved here
 output_dir = "../../data/star/dev"
