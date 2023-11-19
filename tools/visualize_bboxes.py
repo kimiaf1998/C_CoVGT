@@ -47,7 +47,7 @@ def draw_bounding_boxes(question_id, video_id, path_to_videos, output_dir):
         print(f"Frame at {frame_time} seconds extracted and saved as {os.path.join(video_path, f'{frame_time:06d}')}.png")
 
         # Load the frame
-        image = cv2.imread(os.path.join(video_path, f'{frame_time:06d}'.png))
+        image = cv2.imread(os.path.join(video_path, f'{frame_time:06d}.png'))
 
         # Draw the bounding box on the image
         start_point = (int(bbox[0]), int(bbox[1]))
