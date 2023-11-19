@@ -11,11 +11,11 @@ import os
 #############################################################################
 # question_id = "Interaction_T1_4"
 # video_id = "TJZ0P"
-question_id = "Interaction_T1_9"
-video_id = "DUZDL"
-path_to_videos = "./data/star/Charades_v1_480/"
+question_id = "Interaction_T1_5568"
+video_id = "XSS0J"
+path_to_videos = "/media/hdd1/kimia_data/datasets/star/frames_3fps/"
 # Output directory. The frames with the bounding boxes will be saved here
-output_dir = "./data/dev/star/frames_with_bboxes/"
+output_dir = "/media/hdd1/kimia_data/datasets/star/dev"
 #############################################################################
 
 def draw_bounding_boxes(question_id, video_id, path_to_videos, output_dir):
@@ -30,7 +30,7 @@ def draw_bounding_boxes(question_id, video_id, path_to_videos, output_dir):
     video_clip = VideoFileClip(video_path)
 
     # Get the frames and the bounding boxes
-    df = pd.read_json('./C_CoVGT/datasets/star/train_updated_frame_number.json')
+    df = pd.read_json('../datasets/star/train_updated_frame_number.json')
     row = df[df['question_id'] == question_id].iloc[0]
     assert video_id == row["video_id"]
     for frame, bbox in row["bboxes"].items():
