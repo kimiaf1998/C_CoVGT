@@ -35,19 +35,20 @@ def draw_bounding_boxes(question_id, video_id, path_to_videos, output_dir):
     assert video_id == row["video_id"]
     for frame, bbox in row["bboxes"].items():
         frame_num = int(frame)
+        print("frame num:", frame_num)
         # Calculate the time corresponding to the frame number at 3 fps
-        frame_time = frame_num // 3
+        frame_time = frame_num / 3
 
         # Save the extracted frame as an image file
         # extracted_frame_filename = f'{video_id}_frame_{frame_num}.jpg'
         # output_path = os.path.join(write_dir, extracted_frame_filename)
-        output_path = os.path.join(write_dir, f'{frame_time:06d}.png')
+        output_path = os.path.join(write_dir, f'{frame_num:06d}.png')
         # video_clip.save_frame(output_path, t=frame_time)
         #
-        print(f"Frame at {frame_time} seconds extracted and saved as {os.path.join(video_path, f'{frame_time:06d}')}.png")
+        print(f"Frame at {frame_num} seconds extracted and saved as {os.path.join(video_path, f'{frame_num:06d}')}.png")
 
         # Load the frame
-        image = cv2.imread(os.path.join(video_path, f'{frame_time:06d}.png'))
+        image = cv2.imread(os.path.join(video_path, f'{frame_num:06d}.png'))
 
         # Draw the bounding box on the image
         start_point = (int(bbox[0]), int(bbox[1]))
