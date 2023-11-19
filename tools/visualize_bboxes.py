@@ -15,7 +15,7 @@ question_id = "Interaction_T1_5568"
 video_id = "XSS0J"
 path_to_videos = "/media/hdd2/kimia_data/projects/data/star"
 # Output directory. The frames with the bounding boxes will be saved here
-output_dir = "/media/hdd1/kimia_data/datasets/star/dev"
+output_dir = "/media/hdd2/kimia_data/projects/data/star/dev"
 #############################################################################
 
 def draw_bounding_boxes(question_id, video_id, path_to_videos, output_dir):
