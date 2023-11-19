@@ -36,7 +36,7 @@ def draw_bounding_boxes(question_id, video_id, path_to_videos, output_dir):
     for frame, bbox in row["bboxes"].items():
         frame_num = int(frame)
         # Calculate the time corresponding to the frame number at 3 fps
-        frame_time = frame_num / 3
+        frame_time = frame_num // 3
 
         # Save the extracted frame as an image file
         # extracted_frame_filename = f'{video_id}_frame_{frame_num}.jpg'
