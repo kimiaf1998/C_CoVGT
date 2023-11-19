@@ -36,11 +36,13 @@ class CMAtten(nn.Module):
     def get_u_tile(cls, s, s2):
         """
         attended vectors of s2 for each word in s1,
-        signify which words in s2 are most relevant to words in s1
+        signify which vectors in s2 are most relevant to vectors in s1
         """
         a_weight = F.softmax(s, dim=2)  # [B, l1, l2]
         # remove nan from softmax on -inf
         # print(a_weight.shape, s2.shape)
+
+        # handle NaN values
         a_weight.data.masked_fill_(a_weight.data != a_weight.data, 0)
         # [B, l1, l2] * [B, l2, D] -> [B, l1, D]
         u_tile = torch.bmm(a_weight, s2)

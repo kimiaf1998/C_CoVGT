@@ -300,12 +300,10 @@ class Embeddings(nn.Module):
         super().__init__()
         max_position_embeddings = language_len + vision_len
         self.position_embeddings = nn.Embedding(max_position_embeddings, d_model)
-        # self.position_embeddings = nn.Embedding(max_position_embeddings, d_model)
         if sinusoidal_pos_embds:
             create_sinusoidal_embeddings(
                 n_pos=max_position_embeddings,
                 dim=d_model,
-                # out=self.position_embeddings.weight,
                 out=self.position_embeddings.weight,
             )
         self.modality_embedding = nn.Embedding(2, d_model)
@@ -554,6 +552,7 @@ class VGT(nn.Module):
         ##NTrans ###
         X = X.view(bsize, numc, numf, numr, -1).permute(0,1,3,2,4)
         short_mask = get_mask(torch.tensor([numf]*bsize*numc*numr, dtype=torch.long), numf).cuda()
+        # get attention on objects of different frames (Fo)
         X = self.ntrans(X.reshape(bsize*numc*numr, numf, -1), short_mask)[0]
         X = X.reshape(bsize*numc, numr, numf, -1).permute(0,2,1,3)
         
@@ -562,19 +561,24 @@ class VGT(nn.Module):
         ##################################
 
         hd_dim = X.shape[-1]
-        X = X.reshape(bsize*numc*numf, numr, hd_dim)       
+        X = X.reshape(bsize*numc*numf, numr, hd_dim)
+        # get adjacency matrix of relations (R`)
         A = self.gnn.build_graph(X) #(bs*numc*numf, numr, numr)
         ##ETrans################
         A = A.view(bsize*numc, numf, numr*numr)
         graph_mask = get_mask(torch.tensor([numf]*bsize*numc, dtype=torch.long), numf).cuda()
+        # get attention on object relations from adjacent frames
         A = self.etrans(x=A, attn_mask=graph_mask)[0]
         A = A.view(bsize*numc*numf, numr, numr)
         ##################################
         A = F.softmax(A, dim=-1)
+        # temporal graph transformer (Gout)
         X_o = self.gnn(X, A)
+        # add skip connection of node level reps (Fout)
         X_o += X
         
-        satt = self.satt_pool(X_o)  # self-attention to aggregate graph node at each frame
+        satt = self.satt_pool(X_o)  # self-attention on graph nodes at each frame
+        # aggregate graph nodes at each frame
         X_o = torch.sum(X_o*satt, dim=-2)
         # X_o = X.mean(dim=-2)
 
@@ -590,7 +594,7 @@ class VGT(nn.Module):
         # video = self.cm_interaction(video, xlen, language, language_lens, ans_n)
         # video = video.view(bsize, numc, numf, -1)
         #########cross-model interaction##############
-
+        # TODO global transformer ????
         video = video.mean(dim=-2)
 
         #####cross-model attention#############        
@@ -693,9 +697,12 @@ class VGT(nn.Module):
                 #                                             axis=1),[1, ansn]), [-1])
                 # video_mask = video_mask[batch_repeat]
 
-                video_proj = self.position_v(video_proj)
+                # add learnable positional embedding
+                video_proj = self.position_v(video_proj)    #(bs, max_seq_length, dim)
+                # global transformer to capture temporal relations between video contents
                 attended_v = self.mmt(x=video_proj, attn_mask=video_mask)[0]
-                global_feat = attended_v.mean(dim=1)
+                # mean-pool to obtain global reps
+                global_feat = attended_v.mean(dim=1)        #(bs, dim)
                 fusion_proj = self.vqproj(global_feat)
                 
                 # fusion_proj = fusion_proj.view(bs, ansn, -1)
