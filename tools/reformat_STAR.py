@@ -39,7 +39,7 @@ def load_object_class_lookup():
         OBJECT_NAME_LOOKUP[object_class] = object_string
 
 def load_vid_fps_lookup():
-    file_path = './C_CoVGT/datasets/star/vid_fps_mapping.json'
+    file_path = '../datasets/star/vid_fps_mapping.json'
     # Reading the dictionary from the JSON file
     with open(file_path, 'r') as file:
         return json.load(file)
