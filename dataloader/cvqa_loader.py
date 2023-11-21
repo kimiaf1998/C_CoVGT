@@ -219,7 +219,10 @@ class VideoQADataset(Dataset):
         cur_sample = self.data.loc[index]
         vid_id = cur_sample["video_id"]
         vid_id = str(vid_id)
-        qid =  str(cur_sample['qid'])
+        if self.dset == 'STAR':
+            qid =  str(cur_sample['question_id'])
+        else:
+            qid =  str(cur_sample['qid'])
         if 'width' not in cur_sample:
             #msrvtt
             width, height = 320, 240
