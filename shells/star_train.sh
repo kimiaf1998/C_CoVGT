@@ -1,6 +1,6 @@
 GPU=$1
 CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=star \
-	--dataset=star \
+	--dataset=STAR \
 	--mc=5 \
 	--bnum=5 \
 	--epochs=20 \

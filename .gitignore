@@ -1,7 +1,3 @@
 .idea
 __pycache__
 */__pycache__/
-<<<<<<< HEAD
-=======
-/datasets/STAR_orig/*
->>>>>>> 25819ded1b0d04e5627eada7a646367d93dd5805
