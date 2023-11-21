@@ -25,6 +25,9 @@ def extract_clips_with_keyframes_included(frame_list: list, key_frames: list, nu
                                           num_frames_per_clip: int) -> (list, bool):
     frame_count_out = num_clips * num_frames_per_clip
 
+    # Filter out key frames that do not exist in frame_list
+    key_frames = [frame for frame in key_frames if frame in frame_list]
+
     if frame_count_out >= len(key_frames):
         k = frame_count_out - len(key_frames)
         resp = [i for i in key_frames]
