@@ -72,7 +72,7 @@ def generate_json(data: list, output_path: str):
 
 if __name__ == '__main__':
     dataset = 'STAR'
-    video_dir = f'../../data/{dataset}/frames_24fps/'  # extracted video frames, refer to extract_video.py
+    video_dir = f'/data/kimia/hdd2_mount/projects/data/star/pre_features/frame_feat'  # extracted video frames, refer to extract_video.py
     # modes = ['train', 'val', 'test']
     modes = ['train', 'val']
     for mode in modes:
@@ -89,5 +89,5 @@ if __name__ == '__main__':
             ann_data = json.load(fp)
 
         sampled_videos = [data for data in ann_data if data['question_id'] in question_ids]
-        # generate_json(sampled_clips, clips_output_path)
+        generate_json(sampled_clips, clips_output_path)
         generate_json(sampled_videos, videos_output_path)
