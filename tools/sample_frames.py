@@ -52,7 +52,7 @@ def sample_videos_clips(video_path: str, ann_path: str, num_clips: int, num_fram
         try:
             vid_frames = os.listdir(vid_frames_dir)
             # extract frame numbers
-            vid_frames = sorted([os.path.splitext(frame_path.split("-")[1])[0] for frame_path in vid_frames])
+            vid_frames = sorted([os.path.splitext(frame_path.split(".")[0])[0] for frame_path in vid_frames])
             vid_clips = extract_clips_with_keyframes_included(vid_frames, vid_key_frames, num_clips,
                                                               num_frames_per_clip)
             videos.append({vid_qid: vid_clips.tolist()})
