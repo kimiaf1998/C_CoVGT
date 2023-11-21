@@ -290,8 +290,8 @@ class VideoQADataset(Dataset):
                     truncation=True
                 )
             qsn_seq_len = torch.tensor([len(qsn) for qsn in qsn_token_ids], dtype=torch.long)
-        
-        question_id = vid_id +'_'+str(cur_sample["qid"])
+
+        question_id = vid_id +'_'+qid
         if self.mc:
             if self.dset == 'causalvid':
                 qtype = str(cur_sample["type"])   
