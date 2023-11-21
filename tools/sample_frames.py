@@ -89,5 +89,7 @@ if __name__ == '__main__':
             ann_data = json.load(fp)
 
         sampled_videos = [data for data in ann_data if data['question_id'] in question_ids]
+        # generate question_id mapping to sampled frame numbers (clips)
         generate_json(sampled_clips, clips_output_path)
+        # generate sampled videos annotation
         generate_json(sampled_videos, videos_output_path)
