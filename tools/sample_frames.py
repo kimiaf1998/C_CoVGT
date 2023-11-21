@@ -71,7 +71,7 @@ def generate_json(data: list, output_path: str):
 # TODO (sample test from val ds)
 
 if __name__ == '__main__':
-    dataset = 'STAR'
+    dataset = 'star'
     video_dir = f'/data/kimia/hdd2_mount/projects/data/star/pre_features/frame_feat'  # extracted video frames, refer to extract_video.py
     # modes = ['train', 'val', 'test']
     modes = ['train', 'val']
