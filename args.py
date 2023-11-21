@@ -231,7 +231,7 @@ def get_args():
             args.val_csv_path = os.path.join(load_path, "test.csv")
         elif args.dataset == 'STAR':
             args.annotation_path = os.path.join(load_path, "train.json")
-            args.val_csv_path = os.path.join(load_path, "val.json")
+            # args.val_csv_path = os.path.join(load_path, "val.json")
         else:
             args.train_csv_path = os.path.join(load_path, "train.csv")
             args.val_csv_path = os.path.join(load_path, "val.csv")

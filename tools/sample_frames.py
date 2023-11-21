@@ -38,10 +38,8 @@ def extract_clips_with_keyframes_included(frame_list: list, key_frames: list, nu
     return np.asarray(resp).reshape(num_clips, num_frames_per_clip)
 
 
-def sample_videos_clips(video_path: str, ann_path: str, num_clips: int, num_frames_per_clip: int):
-    with open(ann_path, 'r') as fp:
-        ann_data = json.load(fp)
-    videos = []
+def sample_videos_clips(video_path: str, ann_data, num_clips: int, num_frames_per_clip: int):
+    videos = {}
     qids = []
     for vid_data in ann_data:
         vid_id = vid_data['video_id']
@@ -55,15 +53,14 @@ def sample_videos_clips(video_path: str, ann_path: str, num_clips: int, num_fram
             vid_frames = sorted([os.path.splitext(frame_path.split(".")[0])[0] for frame_path in vid_frames])
             vid_clips = extract_clips_with_keyframes_included(vid_frames, vid_key_frames, num_clips,
                                                               num_frames_per_clip)
-            videos.append({vid_qid: vid_clips.tolist()})
-            qids.append(vid_qid)
+            videos.update({vid_qid: vid_clips.tolist()})
         except FileNotFoundError as e:
             print(f"File not found: {e.filename}")
 
-    return videos, qids
+    return videos
 
 
-def generate_json(data: list, output_path: str):
+def generate_json(data: list or dict, output_path: str):
     with open(output_path, 'w') as json_file:
         json.dump(data, json_file)
 
@@ -81,12 +78,10 @@ if __name__ == '__main__':
 
         with open(ann_path, 'r') as fp:
             ann_data = json.load(fp)
-        sampled_clips, question_ids = sample_videos_clips(video_dir, ann_path, 8, 4)
+        sampled_clips = sample_videos_clips(video_dir, ann_data, 8, 4)
+        question_ids = sampled_clips.keys()
         clips_output_path = f'../datasets/{dataset}/clips_{mode}.json'
         videos_output_path = f'../datasets/{dataset}/{mode}.json'
-
-        with open(ann_path, 'r') as fp:
-            ann_data = json.load(fp)
 
         sampled_videos = [data for data in ann_data if data['question_id'] in question_ids]
         # generate question_id mapping to sampled frame numbers (clips)

@@ -64,7 +64,7 @@ class VideoQADataset(Dataset):
             self.ans_group, self.qsn_group = group(self.data, gt=False)
 
         if self.dset == 'STAR':
-            self.vid_clips = load_file(osp.dirname(annotation_path)+f'/clips_{self.mode}.json')[0]
+            self.vid_clips = load_file(osp.dirname(annotation_path)+f'/clips_{self.mode}.json')
 
         if self.dset == 'causalvid':
             data_dir = osp.dirname(csv_path)
