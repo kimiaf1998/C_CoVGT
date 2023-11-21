@@ -15,9 +15,9 @@ import os
 # video_id = "TJZ0P"
 question_id = "Sequence_T5_1602"
 video_id = "QBUAT"
-path_to_videos = "../../data/star"
+path_to_videos = "../../data/STAR"
 # Output directory. The frames with the bounding boxes will be saved here
-output_dir = "../../data/star/dev"
+output_dir = "../../data/STAR/dev"
 #############################################################################
 
 def draw_bounding_boxes(question_id, video_id, path_to_videos, output_dir):
@@ -32,8 +32,8 @@ def draw_bounding_boxes(question_id, video_id, path_to_videos, output_dir):
     # video_clip = VideoFileClip(video_path)
 
     # Get the frames and the bounding boxes
-    df = pd.read_json('../datasets/star/train_updated_frame_number.json')
-    file_path = '../datasets/star/vid_fps_mapping.json'
+    df = pd.read_json('../datasets/STAR/train_updated_frame_number.json')
+    file_path = '../datasets/STAR/vid_fps_mapping.json'
     # Reading the dictionary from the JSON file
     with open(file_path, 'r') as file:
         VID_FPS_LOOKUP = json.load(file)
@@ -97,9 +97,9 @@ draw_bounding_boxes(question_id, video_id, path_to_videos, output_dir)
 # # video_id = "TJZ0P"
 # question_id = "Sequence_T5_1602"
 # video_id = "QBUAT"
-# path_to_videos = "../../data/star/videos"
+# path_to_videos = "../../data/STAR/videos"
 # # Output directory. The frames with the bounding boxes will be saved here
-# output_dir = "../../data/star/frames_with_bboxes/"
+# output_dir = "../../data/STAR/frames_with_bboxes/"
 #
 #
 # #############################################################################
@@ -120,7 +120,7 @@ draw_bounding_boxes(question_id, video_id, path_to_videos, output_dir)
 #
 #
 #     # Get the frames and the bounding boxes
-#     df = pd.read_json('../datasets/star/train_updated_frame_number.json')
+#     df = pd.read_json('../datasets/STAR/train_updated_frame_number.json')
 #     VID_FPS_LOOKUP = load_vid_fps_lookup()
 #     row = df[df['question_id'] == question_id].iloc[0]
 #     assert video_id == row["video_id"]

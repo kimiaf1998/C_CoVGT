@@ -42,8 +42,6 @@ class VideoQADataset(Dataset):
         elif annotation_file_type == ".json":
             self.data = pd.read_json(annotation_path)
         self.dset = annotation_path.split('/')[-2]
-        if self.dset == "star":
-            self.dset = self.dset.upper()
         
         self.video_feature_path = features
         self.bbox_num = bnum
@@ -180,7 +178,7 @@ class VideoQADataset(Dataset):
 
     def get_video_feat_star(self, video_name, qid, width=320, height=240):
         clips = self.vid_clips[qid]
-        video_feature_path = f'/data/kimia/hdd2_mount/projects/data/star/pre_features'
+        video_feature_path = f'/data/kimia/hdd2_mount/projects/data/STAR/pre_features'
         app_feats = []
         roi_feats, roi_bboxs = [], []
         for cid, clip in enumerate(clips):

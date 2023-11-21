@@ -14,7 +14,7 @@ import json
 INPUT_FILE_PATH = './data/STAR/STAR_train.json'
 # File path to write output to
 
-OUTPUT_FILE_PATH = "./C_CoVGT/datasets/star/train_updated_frame_number.json"
+OUTPUT_FILE_PATH = "./C_CoVGT/datasets/STAR/train_updated_frame_number.json"
 ########################################################################
 
 OBJECT_CLASS_LOOKUP={}
@@ -39,7 +39,7 @@ def load_object_class_lookup():
         OBJECT_NAME_LOOKUP[object_class] = object_string
 
 def load_vid_fps_lookup():
-    file_path = '../datasets/star/vid_fps_mapping.json'
+    file_path = '../datasets/STAR/vid_fps_mapping.json'
     # Reading the dictionary from the JSON file
     with open(file_path, 'r') as file:
         return json.load(file)

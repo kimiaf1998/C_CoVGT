@@ -9,8 +9,8 @@ import os
 import pandas as pd
 import json
 
-directory = "./data/star/Charades_v1_480/"
-OUTPUT_FILE_PATH = "./C_CoVGT/datasets/star/vid_fps_mapping.json"
+directory = "./data/STAR/Charades_v1_480/"
+OUTPUT_FILE_PATH = "./C_CoVGT/datasets/STAR/vid_fps_mapping.json"
 
 video_id_to_fps = {}
 for filename in os.listdir(directory):

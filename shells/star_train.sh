@@ -1,5 +1,5 @@
 GPU=$1
-CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=star \
+CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
 	--dataset=STAR \
 	--mc=5 \
 	--bnum=5 \
@@ -19,7 +19,7 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=star \
 	--dropout=0.3 \
 	--seed=666 \
 	--lan="RoBERTa" \
-	--save_dir='../data/save_models/star/CoVGT/' \
+	--save_dir='../data/save_models/STAR/CoVGT/' \
 	#--pretrain_path=../data/save_models/webvid180K/co_e1.pth \
 	
 	
