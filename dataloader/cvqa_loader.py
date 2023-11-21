@@ -308,7 +308,7 @@ class VideoQADataset(Dataset):
             else:
                 ans = cur_sample['answer']
                 if self.dset == 'STAR':
-                    choices = [str(cur_sample["a" + str(i)]) for i in range(self.mc)]
+                    choices = [cur_sample['choices'][i]['choice'] for i in range(self.mc)]
                 else:
                     choices = [str(cur_sample["a" + str(i)]) for i in range(self.mc)]
                 answer_id = choices.index(ans) if ans in choices else -1
