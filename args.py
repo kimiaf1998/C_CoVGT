@@ -226,10 +226,14 @@ def get_args():
     if args.dataset not in ["howto100m", "howtovqa"]:  # VideoQA dataset
         args.features_path = f'../data/{args.dataset}/' #os.path.join(load_path, "s3d.pth")
         # args.features_path = f'/data/datasets/{args.dataset}/'
-        args.train_csv_path = os.path.join(load_path, "train.csv")
         if args.dataset == 'tgifqa':
+            args.train_csv_path = os.path.join(load_path, "train.csv")
             args.val_csv_path = os.path.join(load_path, "test.csv")
+        elif args.dataset == 'STAR':
+            args.annotation_path = os.path.join(load_path, "train.json")
+            args.val_csv_path = os.path.join(load_path, "val.json")
         else:
+            args.train_csv_path = os.path.join(load_path, "train.csv")
             args.val_csv_path = os.path.join(load_path, "val.csv")
         args.test_csv_path = os.path.join(load_path, "test.csv")
         args.vocab_path = os.path.join(load_path, "vocab.json")

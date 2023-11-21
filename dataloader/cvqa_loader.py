@@ -1,4 +1,4 @@
-
+import os.path
 import sys
 sys.path.insert(0, '../')
 import torch
@@ -17,7 +17,6 @@ class VideoQADataset(Dataset):
     def __init__(
         self,
         annotation_path,
-        annotation_file_type,
         features,
         qmax_words=20,
         amax_words=5,
@@ -37,11 +36,14 @@ class VideoQADataset(Dataset):
         :param a2id: answer to index mapping
         :param max_feats: maximum frames to sample from a video
         """
+        annotation_file_type = os.path.splitext(annotation_path)[1]
         if annotation_file_type == "csv":
             self.data = pd.read_csv(annotation_path)
         elif annotation_file_type == "json":
             self.data = pd.read_json(annotation_path)
-        self.dset = self.csv_path.split('/')[-2]
+        self.dset = annotation_path.split('/')[-2]
+        if self.dset == "star":
+            self.dset = self.dset.upper()
         
         self.video_feature_path = features
         self.bbox_num = bnum
@@ -427,7 +429,7 @@ def get_videoqa_loaders(args, features, a2id, tokenizer, test_mode):
     
     if test_mode:
         test_dataset = VideoQADataset(
-            csv_path=args.test_csv_path,
+            annotation_path=args.annotation_path,
             features=features,
             qmax_words=args.qmax_words,
             amax_words=args.amax_words,
@@ -449,7 +451,7 @@ def get_videoqa_loaders(args, features, a2id, tokenizer, test_mode):
         train_loader, val_loader = None, None
     else:
         train_dataset = VideoQADataset(
-        csv_path=args.train_csv_path,
+        annotation_path=args.annotation_path,
         features=features,
         qmax_words=args.qmax_words,
         amax_words=args.amax_words,
@@ -472,7 +474,7 @@ def get_videoqa_loaders(args, features, a2id, tokenizer, test_mode):
         if args.dataset.split('/')[0] in ['tgifqa','tgifqa2']:
             args.val_csv_path = args.test_csv_path
         val_dataset = VideoQADataset(
-            csv_path=args.val_csv_path,
+            annotation_path=args.annotation_path,
             features=features,
             qmax_words=args.qmax_words,
             amax_words=args.amax_words,
