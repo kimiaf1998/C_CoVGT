@@ -37,9 +37,9 @@ class VideoQADataset(Dataset):
         :param max_feats: maximum frames to sample from a video
         """
         annotation_file_type = os.path.splitext(annotation_path)[1]
-        if annotation_file_type == "csv":
+        if annotation_file_type == ".csv":
             self.data = pd.read_csv(annotation_path)
-        elif annotation_file_type == "json":
+        elif annotation_file_type == ".json":
             self.data = pd.read_json(annotation_path)
         self.dset = annotation_path.split('/')[-2]
         if self.dset == "star":
