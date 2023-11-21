@@ -307,7 +307,10 @@ class VideoQADataset(Dataset):
                 answer_txts = choices
             else:
                 ans = cur_sample['answer']
-                choices = [str(cur_sample["a" + str(i)]) for i in range(self.mc)]
+                if self.dset == 'STAR':
+                    choices = [str(cur_sample["a" + str(i)]) for i in range(self.mc)]
+                else:
+                    choices = [str(cur_sample["a" + str(i)]) for i in range(self.mc)]
                 answer_id = choices.index(ans) if ans in choices else -1
 
                 if self.mode not in ['val', 'test'] and rd.random() < 0.3:
