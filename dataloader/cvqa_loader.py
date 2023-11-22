@@ -315,7 +315,7 @@ class VideoQADataset(Dataset):
 
                 if self.mode not in ['val', 'test'] and rd.random() < 0.3:
                     #add randomness to negative answers
-                    qtype = cur_sample['type']
+                    qtype = 'null' if 'type' not in cur_sample else cur_sample['type']
                     if qtype == 'TP': qtype = 'TN'
                     qtype = get_qsn_type(question_txt, qtype) # argument 'qtype' is used to distinguish Question or Reason in CausalVid-QA
                     
@@ -323,9 +323,7 @@ class VideoQADataset(Dataset):
                         valid_anscans = self.all_answers 
                     else:
                         valid_anscans = self.ans_group[qtype]
-                   
-                    # valid_anscans = self.all_answers
-                    
+
                     cand_answers = valid_anscans - set(ans)
                     choices = rd.sample(list(cand_answers), self.mc-1)
                     choices.append(ans)
