@@ -2,7 +2,7 @@ GPU=$1
 CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
 	--dataset=STAR \
 	--mc=4 \
-	--bnum=5 \
+	--bnum=10 \
 	--epochs=20 \
 	--lr=0.00001 \
 	--qmax_words=30 \

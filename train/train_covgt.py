@@ -240,11 +240,15 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
                     f"Epoch {epoch + 1}/{args.epochs}, Progress: {float(i + 1) / len(train_loader):.4f}, Lvqa loss: "
                     f"{running_vqa_loss.avg:.4f}, Train acc: {running_acc.avg:.2%}, Lvq Loss: {running_cl_loss.avg:.4f}"
                 )
+                print(f"Epoch {epoch + 1}/{args.epochs}, Progress: {float(i + 1) / len(train_loader):.4f}, Lvqa loss: "
+                    f"{running_vqa_loss.avg:.4f}, Train acc: {running_acc.avg:.2%}, Lvq Loss: {running_cl_loss.avg:.4f}")
             else:
                 logging.info(
                     f"Epoch {epoch + 1}/{args.epochs}, Progress: {float(i + 1) / len(train_loader):.4f}, Lvqa loss: "
                     f"{running_vqa_loss.avg:.4f}, Train acc: {running_acc.avg:.2%}"
                 )
+                print(f"Epoch {epoch + 1}/{args.epochs}, Progress: {float(i + 1) / len(train_loader):.4f}, Lvqa loss: "
+                    f"{running_vqa_loss.avg:.4f}, Train acc: {running_acc.avg:.2%}")
             running_acc.reset()
             running_vqa_loss.reset()
             running_mlm_loss.reset()

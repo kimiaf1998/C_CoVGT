@@ -89,7 +89,6 @@ class MultiHeadSelfAttention(nn.Module):
             return (
                 x.transpose(1, 2).contiguous().view(bs, -1, self.n_heads * dim_per_head)
             )
-
         q = shape(self.q_lin(query))  # (bs, n_heads, q_length, dim_per_head)
         k = shape(self.k_lin(key))  # (bs, n_heads, k_length, dim_per_head)
         v = shape(self.v_lin(value))  # (bs, n_heads, k_length, dim_per_head)
@@ -414,6 +413,7 @@ class VGT(nn.Module):
         :param vocab_size: size of the vocabulary for the masked language modeling head
         :param baseline: set as "qa" not to use the video
         :param n_negs: number of negatives sampled for cross-modal matching
+        :param bnum: number of feature regions
         """
         super(VGT, self).__init__()
         self.baseline = baseline
