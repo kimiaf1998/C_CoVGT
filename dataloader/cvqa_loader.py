@@ -432,7 +432,7 @@ def get_videoqa_loaders(args, features, a2id, tokenizer, test_mode):
     
     if test_mode:
         test_dataset = VideoQADataset(
-            annotation_path=args.annotation_path,
+            annotation_path=args.val_annotation_path,
             features=features,
             qmax_words=args.qmax_words,
             amax_words=args.amax_words,
@@ -454,7 +454,7 @@ def get_videoqa_loaders(args, features, a2id, tokenizer, test_mode):
         train_loader, val_loader = None, None
     else:
         train_dataset = VideoQADataset(
-        annotation_path=args.annotation_path,
+        annotation_path=args.train_annotation_path,
         features=features,
         qmax_words=args.qmax_words,
         amax_words=args.amax_words,
@@ -477,7 +477,7 @@ def get_videoqa_loaders(args, features, a2id, tokenizer, test_mode):
         if args.dataset.split('/')[0] in ['tgifqa','tgifqa2']:
             args.val_csv_path = args.test_csv_path
         val_dataset = VideoQADataset(
-            annotation_path=args.annotation_path,
+            annotation_path=args.val_annotation_path,
             features=features,
             qmax_words=args.qmax_words,
             amax_words=args.amax_words,

@@ -227,14 +227,14 @@ def get_args():
         args.features_path = f'../data/{args.dataset}/' #os.path.join(load_path, "s3d.pth")
         # args.features_path = f'/data/datasets/{args.dataset}/'
         if args.dataset == 'tgifqa':
-            args.train_csv_path = os.path.join(load_path, "train.csv")
-            args.val_csv_path = os.path.join(load_path, "test.csv")
+            args.train_annotation_path = os.path.join(load_path, "train.csv")
+            args.val_annotation_path = os.path.join(load_path, "test.csv")
         elif args.dataset == 'STAR':
-            args.annotation_path = os.path.join(load_path, "train.json")
-            # args.val_csv_path = os.path.join(load_path, "val.json")
+            args.train_annotation_path = os.path.join(load_path, "train.json")
+            args.val_annotation_path = os.path.join(load_path, "val.json")
         else:
-            args.train_csv_path = os.path.join(load_path, "train.csv")
-            args.val_csv_path = os.path.join(load_path, "val.csv")
+            args.train_annotation_path = os.path.join(load_path, "train.csv")
+            args.val_annotation_path = os.path.join(load_path, "val.csv")
         args.test_csv_path = os.path.join(load_path, "test.csv")
         args.vocab_path = os.path.join(load_path, "vocab.json")
     else:  # Pretraining dataset
