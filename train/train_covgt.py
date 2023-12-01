@@ -121,7 +121,6 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
             batch['qsn_token_ids'],     # qsns token ids
             batch['qsn_seq_len']        # length of qsns token ids
         )
-        
         video_len = batch["video_len"]
         
         question_mask = (question != tokenizer.pad_token_id).float().cuda() #RobBERETa
@@ -223,7 +222,7 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
             nn.utils.clip_grad_norm_(model.parameters(), max_norm=args.clip)
         optimizer.step()
         scheduler.step()
-        
+
         running_vqa_loss.update(vqa_loss.detach().cpu().item(), N)
         if args.mlm_prob:
             running_mlm_loss.update(mlm_loss.detach().cpu().item(), N)
@@ -240,15 +239,11 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
                     f"Epoch {epoch + 1}/{args.epochs}, Progress: {float(i + 1) / len(train_loader):.4f}, Lvqa loss: "
                     f"{running_vqa_loss.avg:.4f}, Train acc: {running_acc.avg:.2%}, Lvq Loss: {running_cl_loss.avg:.4f}"
                 )
-                print(f"Epoch {epoch + 1}/{args.epochs}, Progress: {float(i + 1) / len(train_loader):.4f}, Lvqa loss: "
-                    f"{running_vqa_loss.avg:.4f}, Train acc: {running_acc.avg:.2%}, Lvq Loss: {running_cl_loss.avg:.4f}")
             else:
                 logging.info(
                     f"Epoch {epoch + 1}/{args.epochs}, Progress: {float(i + 1) / len(train_loader):.4f}, Lvqa loss: "
                     f"{running_vqa_loss.avg:.4f}, Train acc: {running_acc.avg:.2%}"
                 )
-                print(f"Epoch {epoch + 1}/{args.epochs}, Progress: {float(i + 1) / len(train_loader):.4f}, Lvqa loss: "
-                    f"{running_vqa_loss.avg:.4f}, Train acc: {running_acc.avg:.2%}")
             running_acc.reset()
             running_vqa_loss.reset()
             running_mlm_loss.reset()

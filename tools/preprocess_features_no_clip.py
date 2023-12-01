@@ -272,18 +272,21 @@ def prepare_inputs(path, frame_list):
     for j in range(total_frames):
         frame_data = video_data[j]
         img = Image.fromarray(frame_data)
-        img = imresize(img, img_size, interp='bicubic')
-        img = img.transpose(2, 0, 1)[None]
+        img = img.resize(img_size)
+        img = np.transpose(img, (2, 0, 1))[None]
         frame_data = np.array(img)
         video_inputs.append(frame_data)
     video_inputs = np.asarray(video_inputs)
     # print(video_inputs.shape)
     return video_inputs
 
-def generate_npy_byframe(model, video_list_file, video_dir, out_dir):
-    videos = load_file(video_list_file)
+def generate_npy_byframe(model, video_dir, out_dir):
+    # videos = load_file(video_list_file)
+    videos = os.listdir(video_dir)
     vnum = len(videos)
+
     for iv, vname in enumerate(videos):
+        print("video:", vname)
         # if iv <= 2400: continue
         # if iv > 3000: break
         fpath = f'{video_dir}/{vname}'
@@ -292,15 +295,16 @@ def generate_npy_byframe(model, video_list_file, video_dir, out_dir):
         if osp.exists(out_path): continue
         videos = prepare_inputs(fpath, frames)
         fnum = videos.shape[0]
+        print("fnum:", fnum)
         if fnum > 100:
-            it = fnum//100
-            left = fnum % 100
+            it = fnum//10
+            left = fnum % 10
             video_feats = []
             for i in range(it):
-                data = run_batch(videos[i*100:100*(i+1)], model)
+                data = run_batch(videos[i*10:10*(i+1)], model)
                 video_feats.append(data)
             if left > 0:
-                data = run_batch(videos[i*100:(i*100)+left], model)
+                data = run_batch(videos[i*10:(i*10)+left], model)
                 video_feats.append(data)
             # print(len(video_feats))
             video_feats = np.concatenate(video_feats, 0)
@@ -418,7 +422,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu_id', type=int, default=0, help='specify which gpu will be used')
     # dataset info
-    parser.add_argument('--dataset', default='nextqa', choices=['tgif-qa', 'msvd', 'STAR', 'msrvtt', 'nextqa','webvid', 'causalvid'], type=str)
+    parser.add_argument('--dataset', default='STAR', choices=['tgif-qa', 'msvd', 'STAR', 'msrvtt', 'nextqa','webvid', 'causalvid'], type=str)
     parser.add_argument('--question_type', default='none', choices=['frameqa', 'count', 'transition', 'action', 'none'], type=str)
     # output
     parser.add_argument('--out', dest='outfile',
@@ -494,3 +498,12 @@ if __name__ == '__main__':
             args.image_height = 112
             args.image_width = 112
         generate_h5(model, args.video_dir, args.video_list_file, args.num_clips, args.outfile.format(args.feature_type))
+    elif args.dataset == 'STAR':
+        args.video_dir = '../../data/STAR/frames/'  # extacted video frames, refer to extract_video.py
+        if args.model == 'resnet101':
+            model = build_resnet()
+        elif args.model == 'resnext101':
+            model = build_resnext()
+            args.image_height = 112
+            args.image_width = 112
+        generate_npy_byframe(model, args.video_dir, '/data/kimia/hdd1_mount/kimia_data/datasets/star/features/frame_feat')

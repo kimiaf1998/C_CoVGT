@@ -129,7 +129,7 @@ def main(args):
                 ep_file = os.path.join(args.save_dir, f"e{epoch}.pth")
                 torch.save(model.state_dict(), ep_file)
                 logging.info('Save to '+ep_file)
-        logging.info(f"Best val model at epoch {best_epoch + 1}")
+        logging.info(f"Best val model at epoch {best_epoch + 1} with acc {best_val_acc:.2f}")
     else:   
     # Evaluate on test set
         test_acc, results = eval(model, test_loader, a2v, args, test=True, tokenizer=tokenizer)

@@ -237,6 +237,9 @@ class VideoQADataset(Dataset):
             video_o, video_f = self.get_video_feature(vid_id, width, height)
         
         vid_duration = video_o.shape[0]
+        # extract topk regions
+        # video_o = video_o[:,:,:5,:]
+
 
         # video_o, video_f = torch.tensor([0]), torch.tensor([0])
         # vid_duration = 0

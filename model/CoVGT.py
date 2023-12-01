@@ -423,7 +423,7 @@ class VGT(nn.Module):
         d_pos = 128
         # video modules
         self.encode_vid = EncoderVid(feat_dim=feature_dim, 
-                                    bbox_dim=5, 
+                                    bbox_dim=5,
                                     feat_hidden=d_model, 
                                     pos_hidden=d_pos)
 
@@ -584,7 +584,6 @@ class VGT(nn.Module):
 
         X_o = X_o.view(bsize, numc, numf, -1)
 
-        # obtain clip-level feature reps (pooling)
         video = self.merge_fr(torch.cat([video_f, X_o], dim=-1))
         # video = X_o
         #########cross-model interaction##############
@@ -594,10 +593,17 @@ class VGT(nn.Module):
         # video = self.cm_interaction(video, xlen, language, language_lens, ans_n)
         # video = video.view(bsize, numc, numf, -1)
         #########cross-model interaction##############
-        # TODO global transformer ????
-        video = video.mean(dim=-2)
 
-        #####cross-model attention#############        
+        # obtain clip-level feature reps (pooling)
+        video = video.mean(dim=-2) # (bs, numc, dmodel)
+
+
+
+        #####cross-model attention#############
+        # for clip-lve xlen=numc
+        # for frame-level xlen = numc * numf
+        # language = bsize * ans_n *  language_lens * d
+        # video = bsize * numc * dmodal
         video = self.cm_interaction(video, numc, language, language_lens, ans_n)
         #####cross-model attention#############
         return video
@@ -698,11 +704,11 @@ class VGT(nn.Module):
                 # video_mask = video_mask[batch_repeat]
 
                 # add learnable positional embedding
-                video_proj = self.position_v(video_proj)    #(bs, max_seq_length, dim)
+                video_proj = self.position_v(video_proj)    #(bs, numc, dmodal)
                 # global transformer to capture temporal relations between video contents
                 attended_v = self.mmt(x=video_proj, attn_mask=video_mask)[0]
                 # mean-pool to obtain global reps
-                global_feat = attended_v.mean(dim=1)        #(bs, dim)
+                global_feat = attended_v.mean(dim=1)        #(bs, dmodal)
                 fusion_proj = self.vqproj(global_feat)
                 
                 # fusion_proj = fusion_proj.view(bs, ansn, -1)
