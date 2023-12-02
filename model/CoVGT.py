@@ -572,19 +572,19 @@ class VGT(nn.Module):
         A = A.view(bsize*numc*numf, numr, numr)
         ##################################
         A = F.softmax(A, dim=-1)
-        # temporal graph transformer (Gout)
-        X_o = self.gnn(X, A)
+        # Gout
+        X_o = self.gnn(X, A) # (bsize*numc*numf, numr, hd_dim)
         # add skip connection of node level reps (Fout)
         X_o += X
         
-        satt = self.satt_pool(X_o)  # self-attention on graph nodes at each frame
+        satt = self.satt_pool(X_o)  # temporal self-attention on graph nodes at each frame
         # aggregate graph nodes at each frame
-        X_o = torch.sum(X_o*satt, dim=-2)
+        X_o = torch.sum(X_o*satt, dim=-2) # (bsize*numc*numf, 1, dmodel)
         # X_o = X.mean(dim=-2)
 
-        X_o = X_o.view(bsize, numc, numf, -1)
+        X_o = X_o.view(bsize, numc, numf, -1) # (bsize, numc, numf, dmodel)
 
-        video = self.merge_fr(torch.cat([video_f, X_o], dim=-1))
+        video = self.merge_fr(torch.cat([video_f, X_o], dim=-1)) #  (bsize, numc, numf, dmodel)
         # video = X_o
         #########cross-model interaction##############
         #uncomment this for TGIF-QA
