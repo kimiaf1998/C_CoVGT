@@ -573,11 +573,11 @@ class VGT(nn.Module):
         ##################################
         A = F.softmax(A, dim=-1)
         # Gout
-        X_o = self.gnn(X, A) # (bsize*numc*numf, numr, hd_dim)
+        X_o = self.gnn(X, A) # (bsize*numc*numf, numr, dmodel)
         # add skip connection of node level reps (Fout)
         X_o += X
         
-        satt = self.satt_pool(X_o)  # temporal self-attention on graph nodes at each frame
+        satt = self.satt_pool(X_o)  # spatial conv on graph nodes at each frame (bsize*numc*numf, numr, 1)
         # aggregate graph nodes at each frame
         X_o = torch.sum(X_o*satt, dim=-2) # (bsize*numc*numf, 1, dmodel)
         # X_o = X.mean(dim=-2)
