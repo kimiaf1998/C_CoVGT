@@ -22,7 +22,7 @@ class Transformer(nn.Module):
         video_max_len=8*4,
         no_tsa=False,
         return_weights=False,
-        learn_time_embed=False,
+        learn_time_embed=True,
         rd_init_tsa=False,
         no_time_embed=False,
     ):
@@ -97,9 +97,8 @@ class Transformer(nn.Module):
 
     def forward(
         self,
-        query_embed=None,
-        pos_embed=None,
-        vt_encoding=None,
+        query_embed,
+        vt_encoding,
         query_mask=None,
         vt_mask=None,
     ):
@@ -107,11 +106,11 @@ class Transformer(nn.Module):
         # time-space-text attention
         # t = numc*numf
         hs = self.decoder(
-            query_embed=query_embed,  # n_queriesx(bsize*t)xdmodel
-            vt_encoding=vt_encoding,  # (bsize*t)x1xdmodel
+            query_embed=query_embed,  # n_queriesx(bsize*t)xd_model
+            vt_encoding=vt_encoding,  # (bsize*t)x1xd_model
             query_mask=query_mask,  # (bsize*t)xn_queries
-            vt_mask=vt_mask, # bsizext
-            query_pos=pos_embed, # # n_queriesx(bsize*t)
+            vt_mask=vt_mask, # (bsizext)x1
+            query_pos=self.time_embed, # n_queriesxd_model
         )  # n_layersxn_queriesx(bsize*t)xdmodel
         if self.return_weights:
             hs, weights, cross_weights = hs
@@ -141,14 +140,13 @@ class TransformerDecoder(nn.Module):
 
     def forward(
         self,
-        query_embed,
+        query_encoding,
         vt_encoding,
         query_mask: Optional[Tensor] = None,
         vt_mask: Optional[Tensor] = None,
-        pos: Optional[Tensor] = None,
         query_pos: Optional[Tensor] = None,
     ):
-        output = query_embed
+        output = query_encoding
 
         intermediate = []
         intermediate_weights = []

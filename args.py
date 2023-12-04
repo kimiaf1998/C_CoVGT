@@ -153,7 +153,7 @@ def get_args():
         "--test", type=int, default=0, help="use to evaluate without training"
     )
     parser.add_argument(
-        "--lr", type=float, default=0.00005, help="initial learning rate"
+        "--lr", type=float, default=5e-5, help="initial learning rate"
     )
     parser.add_argument("--weight_decay", type=float, default=0, help="weight decay")
     parser.add_argument(
@@ -197,11 +197,127 @@ def get_args():
         "--bnum", type=int, default=10, help="number of region proposal"
     )
     parser.add_argument(
-        "--cl_loss", type=float, default=0, help="trade offf with contrastive loss"
+        "--cl_loss", type=float, default=0, help="trade off with contrastive loss"
     )
     parser.add_argument(
         "--lan", type=str, default='RoBERTa', help="BERT or RoBERTa"
     )
+
+
+    # TubeDecoder args
+    # Training hyper-parameters
+    parser.add_argument("--weight_decay", default=1e-4, type=float)
+    parser.add_argument("--lr_drop", default=10, type=int)
+    parser.add_argument(
+        "--epoch_chunks",
+        default=-1,
+        type=int,
+        help="If greater than 0, will split the training set into chunks and validate/checkpoint after each chunk",
+    )
+    parser.add_argument("--optimizer", default="adam", type=str)
+    parser.add_argument(
+        "--clip_max_norm", default=0.1, type=float, help="gradient clipping max norm"
+    )
+    parser.add_argument(
+        "--eval_skip",
+        default=1,
+        type=int,
+        help='do evaluation every "eval_skip" epochs',
+    )
+
+    parser.add_argument(
+        "--schedule",
+        default="linear_with_warmup",
+        type=str,
+        choices=("step", "multistep", "linear_with_warmup", "all_linear_with_warmup"),
+    )
+    parser.add_argument("--ema", action="store_true")
+    parser.add_argument("--ema_decay", type=float, default=0.9998)
+    parser.add_argument(
+        "--fraction_warmup_steps",
+        default=0.01,
+        type=float,
+        help="Fraction of total number of steps",
+    )
+
+    parser.add_argument(
+        "--position_embedding",
+        default="sine",
+        type=str,
+        choices=("sine", "learned"),
+        help="Type of positional embedding to use on top of the image features",
+    )
+
+    # Transformer
+    parser.add_argument(
+        "--loc_dec_layers",
+        default=6,
+        type=int,
+        help="Number of decoding layers in the transformer",
+    )
+    parser.add_argument(
+        "--loc_hidden_dim",
+        default=256,
+        type=int,
+        help="Size of the embeddings (dimension of the transformer)",
+    )
+    parser.add_argument(
+        "--num_queries",
+        default=20,
+        type=int,
+        help="Number of object query slots per image",
+    )
+
+    # Loss
+    parser.add_argument(
+        "--no_aux_loss",
+        dest="aux_loss",
+        action="store_false",
+        help="Disables auxiliary decoding losses (loss at each layer)",
+    )
+    parser.add_argument(
+        "--sigma",
+        type=int,
+        default=1,
+        help="standard deviation for the quantized gaussian law used for the kullback leibler divergence loss",
+    )
+    parser.add_argument(
+        "--no_guided_attn",
+        dest="guided_attn",
+        action="store_false",
+        help="whether to use the guided attention loss",
+    )
+    parser.add_argument(
+        "--no_sted",
+        dest="sted",
+        action="store_false",
+        help="whether to use start end KL loss",
+    )
+
+    # Loss coefficients
+    parser.add_argument("--bbox_loss_coef", default=5, type=float)
+    parser.add_argument("--giou_loss_coef", default=2, type=float)
+    parser.add_argument("--sted_loss_coef", default=10, type=float)
+    parser.add_argument("--guided_attn_loss_coef", default=1, type=float)
+
+
+    # Baselines
+    parser.add_argument(
+        "--learn_time_embed",
+        action="store_true",
+        help="whether to learn time embeddings or use frozen sinusoidal ones",
+    )
+    parser.add_argument(
+        "--no_tsa",
+        action="store_true",
+        help="whether to deactivate the temporal self-attention in the decoder",
+    )
+    parser.add_argument(
+        "--rd_init_tsa",
+        action="store_true",
+        help="whether to randomly initialize the temporal self-attention in the decoder",
+    )
+
 
     args = parser.parse_args()
 

@@ -540,7 +540,7 @@ class VGT(nn.Module):
         video_o, video_f = video[0], video[1]
         video_f = self.linear_video(video_f)
         video_f = gelu(video_f)
-        video_f = self.norm_video(video_f) #(bs, numc, numf, dmodel)
+        video_f = self.norm_video(video_f) # (bs, numc, numf, dmodel)
         
 
         bsize, numc, numf, numr, fdim = video_o.size()  # (bsize, n clips,n frames, n regions, feat dim)

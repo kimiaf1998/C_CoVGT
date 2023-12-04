@@ -15,7 +15,7 @@ class TimeEmbeddingLearned(nn.Module):
     Absolute pos embedding, learned.
     """
 
-    def __init__(self, num_pos_feats=200, d_model=512):
+    def __init__(self, num_pos_feats=8*4, d_model=512):
         super().__init__()
         self.time_embed = nn.Embedding(num_pos_feats, d_model)
         self.reset_parameters()
@@ -24,7 +24,7 @@ class TimeEmbeddingLearned(nn.Module):
         nn.init.uniform_(self.time_embed.weight)
 
     def forward(self, ln):
-        return self.time_embed.weight[:ln].unsqueeze(1)
+        return self.time_embed.weight[:ln].unsqueeze(1) # 1x(num_queries)xd_model
 
 
 class TimeEmbeddingSine(nn.Module):

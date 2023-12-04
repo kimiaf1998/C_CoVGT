@@ -47,55 +47,42 @@ class TubeDecoder(nn.Module):
 
     def __init__(
         self,
-        backbone,
         transformer,
         num_queries,
         aux_loss=False,
-        video_max_len=200,
-        stride=5,
+        video_max_len=8*4,
         guided_attn=False,
-        fast=False,
-        fast_mode="",
         sted=True,
     ):
         """
-        :param backbone: visual backbone model
         :param transformer: transformer model
         :param num_queries: number of object queries per frame
         :param aux_loss: whether to use auxiliary losses at every decoder layer
         :param video_max_len: maximum number of frames in the model
-        :param stride: temporal stride k
         :param guided_attn: whether to use guided attention loss
-        :param fast: whether to use the fast branch
-        :param fast_mode: which variant of fast branch to use
         :param sted: whether to predict start and end proba
         """
         super().__init__()
         self.num_queries = num_queries
         self.transformer = transformer
         hidden_dim = transformer.d_model
-        self.bbox_embed = MLP(hidden_dim, hidden_dim, 4, 3)
-        self.query_embed = nn.Embedding(num_queries, hidden_dim)
+        self.bbox_embed = MLP(hidden_dim, hidden_dim, 1, 3) # bool (is the ans or not)
+        # self.query_embed = nn.Embedding(num_queries, hidden_dim)
 
-        self.input_proj = nn.Conv2d(backbone.num_channels, hidden_dim, kernel_size=1)
-        self.backbone = backbone
         self.aux_loss = aux_loss
 
         self.video_max_len = video_max_len
-        self.stride = stride
         self.guided_attn = guided_attn
-        self.fast = fast
-        self.fast_mode = fast_mode
         self.sted = sted
         if sted:
             self.sted_embed = MLP(hidden_dim, hidden_dim, 2, 2, dropout=0.5)
 
     def forward(
         self,
-        video,
-        video_mask,
-        text,
-        text_mask,
+        object_encoding, # (bs, numc, numf, numr, dmodel)
+        vt_encoding, # (bs, numc, dmodel)
+        query_mask, # (bs, numc, numf, numr)
+        vt_mask, # (bs, t)
     ):
         """The forward expects a NestedTensor, which consists of:
            - samples.tensor: batched frames, of shape [n_frames x 3 x H x W]
@@ -109,23 +96,18 @@ class TubeDecoder(nn.Module):
            - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
                             dictionnaries containing the two above keys for each decoder layer.
         """
-        vt_encodings = Fcm
-        mask = mask of Fcm
-        assert vt_encodings is not None
-        # space-time decoder
+        assert vt_encoding is not None
+        # space-time decode
+
+        bs, numc, numf, num_queries, _ = object_encoding.size()
+        t = numc * numf
+        query_encoding = object_encoding.view(num_queries, bs*t, -1) # (num_queries, bs*t, dmodel)
+        vt_encoding = vt_encoding.view(1, bs*numc, -1).repeat(numf, 1, 1) # (1, bs*t, dmodel)
         hs = self.transformer(
-            img_memory=memory_cache[
-                "img_memory"
-            ],  # (math.ceil(H/32)*math.ceil(W/32) + n_tokens)x(BT)xF
-            mask=memory_cache[
-                "mask"
-            ],  # (BT)x(math.ceil(H/32)*math.ceil(W/32) + n_tokens)
-            pos_embed=memory_cache["pos_embed"],  # n_tokensx(BT)xF
-            query_embed=memory_cache["query_embed"],  # (num_queries)x(BT)xF
-            query_mask=memory_cache["query_mask"],  # Bx(Txnum_queries)
-            encode_and_save=False,
-            text_memory=memory_cache["text_memory"], # Lx(BT)xF => video cm (frame x lanM)
-            text_mask=memory_cache["text_attention_mask"], # (BT)xL
+            query_encoding=query_encoding,  # (num_queries)x(BT)xF
+            vt_encoding=vt_encoding,  # (1)x(BT)xF
+            query_mask=query_mask.view(bs, -1),  # Bx(Txnum_queries)
+            vt_mask=vt_mask.view(bs*t, -1),  # (BT)x1
         )
         if self.guided_attn:
             hs, weights, cross_weights = hs
@@ -135,10 +117,10 @@ class TubeDecoder(nn.Module):
         if self.sted:
             outputs_sted = self.sted_embed(hs)
 
-        hs = hs.flatten(1, 2)  # n_layersxbxtxf -> n_layersx(b*t)xf
+        hs = hs.flatten(2, 3)  # n_layersxnum_queriesxbxtxf -> n_layersxnum_queriesx(b*t)xf
 
         outputs_coord = self.bbox_embed(hs).sigmoid()
-        out.update({"pred_boxes": outputs_coord[-1]})
+        out.update({"pred_boxes": outputs_coord[-1]}) # fetch last-layer output -> num_queriesx(b*t)x1
         if self.sted:
             out.update({"pred_sted": outputs_sted[-1]})
         if self.guided_attn:
@@ -371,22 +353,15 @@ class SetCriterion(nn.Module):
 
 def build(args):
     device = torch.device(args.device)
-
-    backbone = build_backbone(args)
-
     transformer = build_transformer(args)
 
-    model = TubeDETR(
-        backbone,
+    model = TubeDecoder(
         transformer,
         num_queries=args.num_queries,
         aux_loss=args.aux_loss,
         video_max_len=args.video_max_len_train,
-        stride=args.stride,
         guided_attn=args.guided_attn,
-        fast=args.fast,
-        fast_mode=args.fast_mode,
-        sted=args.sted,
+        sted=True,
     )
     weight_dict = {
         "loss_bbox": args.bbox_loss_coef,
