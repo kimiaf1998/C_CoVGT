@@ -293,14 +293,14 @@ def _get_clones(module, N):
 
 def build_transformer(args):
     return Transformer(
-        d_model=args.hidden_dim,
+        d_model=args.loc_hidden_dim,
         dropout=args.dropout,
-        nhead=args.nheads,
-        dim_feedforward=args.dim_feedforward,
+        nhead=args.n_heads,
+        dim_feedforward=args.ff_dim,
         num_decoder_layers=args.dec_layers,
         return_intermediate_dec=True,
         pass_pos_and_query=args.pass_pos_and_query,
-        video_max_len=args.video_max_len_train,
+        video_max_len=args.video_max_len,
         no_tsa=args.no_tsa,
         return_weights=args.guided_attn,
         learn_time_embed=args.learn_time_embed,

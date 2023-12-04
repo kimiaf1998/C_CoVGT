@@ -12,12 +12,10 @@ import torch.nn.functional as F
 from torch import nn
 import math
 
-import util.dist as dist
-from util import box_ops
-from util.misc import NestedTensor
+# import util.dist as dist
+# from util import box_ops
 
-from .backbone import build_backbone
-from .transformer import build_transformer
+from .space_time_decoder import build_transformer
 
 
 class MLP(nn.Module):
@@ -79,9 +77,9 @@ class TubeDecoder(nn.Module):
 
     def forward(
         self,
-        object_encoding, # (bs, numc, numf, numr, dmodel)
+        object_encoding, # (bs, t, numr, dmodel)
         vt_encoding, # (bs, numc, dmodel)
-        object_mask, # (bs, numc, numf, numr)
+        object_mask, # (bs, t, numr)
         vt_mask, # (bs, t)
     ):
         """The forward expects a NestedTensor, which consists of:
@@ -99,8 +97,9 @@ class TubeDecoder(nn.Module):
         assert vt_encoding is not None
         # space-time decode
 
-        bs, numc, numf, num_queries, _ = object_encoding.size()
-        t = numc * numf
+        bs, t, num_queries, _ = object_encoding.size()
+        _, numc, _ = vt_encoding.size()
+        numf = t//numc
         query_encoding = object_encoding.view(num_queries, bs*t, -1) # (num_queries, bs*t, dmodel)
         vt_encoding = vt_encoding.view(1, bs*numc, -1).repeat(numf, 1, 1) # (1, bs*t, dmodel)
         hs = self.transformer(
@@ -359,7 +358,7 @@ def build(args):
         transformer,
         num_queries=args.num_queries,
         aux_loss=args.aux_loss,
-        video_max_len=args.video_max_len_train,
+        video_max_len=args.video_max_len,
         guided_attn=args.guided_attn,
         sted=True,
     )

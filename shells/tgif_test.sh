@@ -5,7 +5,7 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=tgifqa \
 	--test=1 \
 	--qmax_words=0 \
 	--amax_words=20 \
-	--max_feats=32 \
+	--video_max_len=32 \
 	--batch_size=64 \
 	--batch_size_val=64 \
 	--num_thread_reader=8 \

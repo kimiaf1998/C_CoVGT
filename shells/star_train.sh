@@ -7,7 +7,7 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
 	--lr=0.00001 \
 	--qmax_words=30 \
 	--amax_words=38 \
-	--max_feats=32 \
+	--video_max_len=32 \
 	--batch_size=64 \
 	--batch_size_val=64 \
 	--num_thread_reader=8 \
@@ -21,6 +21,9 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
 	--lan="RoBERTa" \
 	--save_dir='../data/save_models/STAR/CoVGT/' \
 	--pretrain_path=../data/save_models/webvid180K/co_e1.pth \
+	--num_queries=20 \
+	--ema \
+
 	
 	
 	

@@ -7,7 +7,7 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=causalvid \
 	--lr=0.00001 \
 	--qmax_words=0 \
 	--amax_words=38 \
-	--max_feats=32 \
+	--video_max_len=32 \
 	--batch_size=64 \
 	--batch_size_val=64 \
 	--num_thread_reader=8 \

@@ -35,7 +35,11 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
             question_mask = (question!=tokenizer.pad_token_id).float() #RobBERETa
             answer_mask = (answer!=tokenizer.pad_token_id).float() #RobBERETa
 
+            print("video_o shape:", video_o.size())
             video_mask = get_mask(video_len, video_o.size(1)).cuda()
+            print("video_mask:", video_mask.size())
+            object_mask = get_mask(video_o.size(2), args.num_queries).cuda()
+            print("object_mask:", object_mask.size())
             count += answer_id.size(0)
             video = (video_o, video_f)
             if not args.mc:
@@ -44,6 +48,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                     question,
                     text_mask=question_mask,
                     video_mask=video_mask,
+                    object_mask=object_mask,
                     seq_len = seq_len
                 )
                 topk = torch.topk(predicts, dim=1, k=10).indices.cpu()
@@ -126,8 +131,13 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
         question_mask = (question != tokenizer.pad_token_id).float().cuda() #RobBERETa
         answer_mask = (answer!=tokenizer.pad_token_id).float().cuda() #RobBERETa
         video_mask = (
-            get_mask(video_len, video_o.size(1)).cuda() if args.max_feats > 0 else None
+            get_mask(video_len, video_o.size(1)).cuda() if args.video_max_len > 0 else None
         )
+        print("video_o shape:", video_o.size())
+        video_mask = get_mask(video_len, video_o.size(1)).cuda()
+        print("video_mask:", video_mask.size())
+        object_mask = get_mask(video_o.size(2), args.num_queries).cuda()
+        print("object_mask:", object_mask.size())
        
         qsn_mask = (qsn_token_ids != tokenizer.pad_token_id).float().cuda()
         
@@ -141,6 +151,7 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
                 question,
                 text_mask=question_mask,
                 video_mask=video_mask,
+                object_mask=object_mask,
                 seq_len = seq_len
             )
         else:
@@ -149,6 +160,7 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
                 question,
                 text_mask=answer_mask,
                 video_mask=video_mask,
+                object_mask=object_mask,
                 answer=answer.cuda(),
                 seq_len = seq_len,
                 seg_feats = seg_feats,

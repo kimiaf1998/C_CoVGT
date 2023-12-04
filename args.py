@@ -100,10 +100,10 @@ def get_args():
         help="maximum number of words in the answer",
     )
     parser.add_argument(
-        "--max_feats",
+        "--video_max_len",
         type=int,
-        default=20,
-        help="maximum number of video features considered",
+        default=32,
+        help="video_max_len: maximum frames to sample from a video",
     )
 
     # Paths
@@ -206,7 +206,8 @@ def get_args():
 
     # TubeDecoder args
     # Training hyper-parameters
-    parser.add_argument("--weight_decay", default=1e-4, type=float)
+    # TODO resolve conflict
+    # parser.add_argument("--weight_decay", default=1e-4, type=float)
     parser.add_argument("--lr_drop", default=10, type=int)
     parser.add_argument(
         "--epoch_chunks",

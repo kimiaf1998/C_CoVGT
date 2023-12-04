@@ -22,7 +22,7 @@ class VideoQADataset(Dataset):
         amax_words=5,
         tokenizer=None,
         a2id=None,
-        max_feats=20,
+        video_max_len=32,
         mc=0,
         bnum=10,
         cl_loss=0
@@ -34,7 +34,7 @@ class VideoQADataset(Dataset):
         :param amax_words: maximum number of words for an answer
         :param tokenizer: tokenizer
         :param a2id: answer to index mapping
-        :param max_feats: maximum frames to sample from a video
+        :param video_max_len: maximum frames to sample from a video
         """
         annotation_file_type = os.path.splitext(annotation_path)[1]
         if annotation_file_type == ".csv":
@@ -51,7 +51,7 @@ class VideoQADataset(Dataset):
         self.amax_words = amax_words
         self.a2id = a2id
         self.tokenizer = tokenizer
-        self.max_feats = max_feats
+        self.video_max_len = video_max_len
         self.mc = mc
         self.lvq = cl_loss
         self.mode = osp.basename(annotation_path).split('.')[0] #train, val or test
@@ -441,7 +441,7 @@ def get_videoqa_loaders(args, features, a2id, tokenizer, test_mode):
             amax_words=args.amax_words,
             tokenizer=tokenizer,
             a2id=a2id,
-            max_feats=args.max_feats,
+            video_max_len=args.video_max_len,
             mc=args.mc,
             bnum =args.bnum,
         )
@@ -463,7 +463,7 @@ def get_videoqa_loaders(args, features, a2id, tokenizer, test_mode):
         amax_words=args.amax_words,
         tokenizer=tokenizer,
         a2id=a2id,
-        max_feats=args.max_feats,
+        video_max_len=args.video_max_len,
         mc=args.mc,
         bnum =args.bnum,
         cl_loss=args.cl_loss
@@ -486,7 +486,7 @@ def get_videoqa_loaders(args, features, a2id, tokenizer, test_mode):
             amax_words=args.amax_words,
             tokenizer=tokenizer,
             a2id=a2id,
-            max_feats=args.max_feats,
+            video_max_len=args.video_max_len,
             mc=args.mc,
             bnum =args.bnum,
         )

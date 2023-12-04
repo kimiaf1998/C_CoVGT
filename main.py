@@ -58,7 +58,7 @@ def main(args):
         transformer,
         num_queries=args.num_queries,
         aux_loss=args.aux_loss,
-        video_max_len=args.video_max_len_train,
+        video_max_len=args.video_max_len,
         guided_attn=args.guided_attn,
         sted=args.sted,
     )
@@ -73,7 +73,7 @@ def main(args):
         d_ff=args.ff_dim,
         h=args.n_heads,
         dropout=args.dropout,
-        T=args.max_feats,
+        T=args.video_max_len,
         Q=args.qmax_words,
         vocab_size = tokenizer.vocab_size,
         baseline=args.baseline,
