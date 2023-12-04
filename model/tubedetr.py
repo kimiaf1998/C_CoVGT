@@ -81,7 +81,7 @@ class TubeDecoder(nn.Module):
         self,
         object_encoding, # (bs, numc, numf, numr, dmodel)
         vt_encoding, # (bs, numc, dmodel)
-        query_mask, # (bs, numc, numf, numr)
+        object_mask, # (bs, numc, numf, numr)
         vt_mask, # (bs, t)
     ):
         """The forward expects a NestedTensor, which consists of:
@@ -106,7 +106,7 @@ class TubeDecoder(nn.Module):
         hs = self.transformer(
             query_encoding=query_encoding,  # (num_queries)x(BT)xF
             vt_encoding=vt_encoding,  # (1)x(BT)xF
-            query_mask=query_mask.view(bs, -1),  # Bx(Txnum_queries)
+            query_mask=object_mask.view(bs, -1),  # Bx(Txnum_queries)
             vt_mask=vt_mask.view(bs*t, -1),  # (BT)x1
         )
         if self.guided_attn:

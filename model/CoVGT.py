@@ -10,6 +10,7 @@ from transformers.modeling_outputs import BaseModelOutput
 from transformers import BertConfig
 from transformers import RobertaConfig
 from model.graph import Graph
+from model.tubedetr import TubeDecoder
 from util import get_mask
 import torch.nn.functional as F
 from model.cmatt import CMAtten
@@ -385,6 +386,7 @@ class VGT(nn.Module):
     def __init__(
         self,
         tokenizer,
+        tube_detector,
         feature_dim=1024,
         word_dim=768,
         N=2,
@@ -501,6 +503,10 @@ class VGT(nn.Module):
         ###################cross-mode interaction###########
         self.bidirec_att = CMAtten()
         # self.final_proj = nn.Linear(d_model, 1) # classification layer
+
+
+        ################### Tube detection #################
+        self.tube_detector = tube_detector
         
 
     def _init_weights(self, module):
@@ -707,6 +713,24 @@ class VGT(nn.Module):
                 video_proj = self.position_v(video_proj)    #(bs, numc, dmodal)
                 # global transformer to capture temporal relations between video contents
                 attended_v = self.mmt(x=video_proj, attn_mask=video_mask)[0]
+
+                # predict answer bboxes (tube decoder)
+                video_o, _ = video[0], video[1]
+
+                bsize, numc, numf, numr, fdim = video_o.size()  # (bsize, n clips,n frames, n regions, feat dim)
+
+                X = self.encode_vid(video_o)  # (bs, numc*numf, numr, dmodel)
+                X = X.view(bsize, numc, numf, numr, -1)
+
+                # TODO define masks before this step
+                query_mask,  # (bs, numc, numf, numr)
+                vt_mask,  # (bs, t)
+
+                # TODO use tube output and return as  head predictions
+                tube = self.tube_detector(object_encoding=X, vt_encoding=attended_v, )
+
+                # TODO add localization loss
+
                 # mean-pool to obtain global reps
                 global_feat = attended_v.mean(dim=1)        #(bs, dmodal)
                 fusion_proj = self.vqproj(global_feat)

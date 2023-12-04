@@ -11,6 +11,8 @@ from transformers import get_cosine_schedule_with_warmup
 from args import get_args
 from model.CoVGT import VGT
 from loss import LogSoftmax
+from model.space_time_decoder import build_transformer
+from model.tubedetr import TubeDecoder
 from util import compute_a2v, load_model_by_key, save_to
 from dataloader.cvqa_loader import get_videoqa_loaders
 from train.train_covgt import train, eval
@@ -49,8 +51,21 @@ def main(args):
         logging.info(f"Length of Answer Vocabulary: {len(a2id)}")
 
     # Model
+    # Space-time decoder
+    transformer = build_transformer(args)
+
+    tube_detector = TubeDecoder(
+        transformer,
+        num_queries=args.num_queries,
+        aux_loss=args.aux_loss,
+        video_max_len=args.video_max_len_train,
+        guided_attn=args.guided_attn,
+        sted=args.sted,
+    )
+
     model = VGT(
         tokenizer = tokenizer,
+        tube_detector=tube_detector,
         feature_dim=args.feature_dim,
         word_dim=args.word_dim,
         N=args.n_layers,

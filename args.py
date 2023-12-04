@@ -197,7 +197,7 @@ def get_args():
         "--bnum", type=int, default=10, help="number of region proposal"
     )
     parser.add_argument(
-        "--cl_loss", type=float, default=0, help="trade off with contrastive loss"
+        "--cl_loss", type=float, default=0, help="trade of  f with contrastive loss"
     )
     parser.add_argument(
         "--lan", type=str, default='RoBERTa', help="BERT or RoBERTa"
