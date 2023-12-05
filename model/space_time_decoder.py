@@ -44,7 +44,7 @@ class Transformer(nn.Module):
         """
         super().__init__()
 
-        self.pass_pos_and_query = pass_pos_and_query
+        # self.pass_pos_and_query = pass_pos_and_query
 
         decoder_layer = TransformerDecoderLayer(
             d_model,
@@ -297,13 +297,12 @@ def build_transformer(args):
         dropout=args.dropout,
         nhead=args.n_heads,
         dim_feedforward=args.ff_dim,
-        num_decoder_layers=args.dec_layers,
+        num_decoder_layers=args.loc_dec_layers,
         return_intermediate_dec=True,
-        pass_pos_and_query=args.pass_pos_and_query,
+        # pass_pos_and_query=args.pass_pos_and_query,
         video_max_len=args.video_max_len,
         no_tsa=args.no_tsa,
         return_weights=args.guided_attn,
         learn_time_embed=args.learn_time_embed,
         rd_init_tsa=args.rd_init_tsa,
-        no_time_embed=args.no_time_embed,
     )

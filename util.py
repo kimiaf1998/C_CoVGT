@@ -88,10 +88,12 @@ class AverageMeter:
         self.avg = self.sum / self.count
 
 
-def get_mask(lengths, max_length):
+def get_mask(lengths, max_length, dim=1):
     """ Computes a batch of padding masks given batched lengths """
+    print("length:", lengths)
+    print("max_length:", max_length)
     mask = 1 * (
-        torch.arange(max_length).unsqueeze(1).to(lengths.device) < lengths
+        torch.arange(max_length).unsqueeze(dim).to(lengths.device) < lengths
     ).transpose(0, 1)
     return mask
 

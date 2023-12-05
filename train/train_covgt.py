@@ -30,6 +30,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
             )
            
             video_len = batch["video_len"]
+            object_len = batch["object_len"] # TODO obj len = 10 not a loist
             seq_len = batch["seq_len"]
            
             question_mask = (question!=tokenizer.pad_token_id).float() #RobBERETa
@@ -38,7 +39,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
             print("video_o shape:", video_o.size())
             video_mask = get_mask(video_len, video_o.size(1)).cuda()
             print("video_mask:", video_mask.size())
-            object_mask = get_mask(video_o.size(2), args.num_queries).cuda()
+            object_mask = get_mask(object_len, video_o.size(3), dim=2).cuda()
             print("object_mask:", object_mask.size())
             count += answer_id.size(0)
             video = (video_o, video_f)
@@ -127,7 +128,8 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
             batch['qsn_seq_len']        # length of qsns token ids
         )
         video_len = batch["video_len"]
-        
+        object_len = batch["object_len"]
+
         question_mask = (question != tokenizer.pad_token_id).float().cuda() #RobBERETa
         answer_mask = (answer!=tokenizer.pad_token_id).float().cuda() #RobBERETa
         video_mask = (
@@ -136,7 +138,7 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
         print("video_o shape:", video_o.size())
         video_mask = get_mask(video_len, video_o.size(1)).cuda()
         print("video_mask:", video_mask.size())
-        object_mask = get_mask(video_o.size(2), args.num_queries).cuda()
+        object_mask = get_mask(video_o.size(2), object_len, dim=2).cuda()
         print("object_mask:", object_mask.size())
        
         qsn_mask = (qsn_token_ids != tokenizer.pad_token_id).float().cuda()
