@@ -28,19 +28,23 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                 batch['seg_feats'].cuda(),
                 batch['seg_num']
             )
-           
+
             video_len = batch["video_len"]
-            object_len = batch["object_len"] # TODO obj len = 10 not a loist
+            max_object_len = max(batch["object_len"])
             seq_len = batch["seq_len"]
-           
+
             question_mask = (question!=tokenizer.pad_token_id).float() #RobBERETa
             answer_mask = (answer!=tokenizer.pad_token_id).float() #RobBERETa
 
             print("video_o shape:", video_o.size())
+            bs, _, _, max_object_num, _ = video_o.size()
             video_mask = get_mask(video_len, video_o.size(1)).cuda()
             print("video_mask:", video_mask.size())
-            object_mask = get_mask(object_len, video_o.size(3), dim=2).cuda()
-            print("object_mask:", object_mask.size())
+            # object_mask = get_mask(object_len.flatten(0,1), max_object_num).bool().cuda()
+            print("object_len:", max_object_len)
+            object_mask = (torch.arange(max_object_len).unsqueeze(1).to(video_o.device) < video_o.size(2)).repeat(1, max_object_len)
+            print("object_mask:", object_mask)
+            print("object_mask size:", object_mask.size())
             count += answer_id.size(0)
             video = (video_o, video_f)
             if not args.mc:
@@ -80,16 +84,17 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                     question,
                     text_mask=answer_mask,
                     video_mask=video_mask,
+                    object_mask=object_mask,
                     answer=answer,
                     seq_len = seq_len,
                     seg_feats = seg_feats,
                     seg_num = seg_num
                 )
-                # predicts = fusion_proj.squeeze() 
-                
+                # predicts = fusion_proj.squeeze()
+
                 fusion_proj = fusion_proj.unsqueeze(2)
                 predicts = torch.bmm(answer_proj, fusion_proj).squeeze()
-                
+
                 predicted = torch.max(predicts, dim=1).indices.cpu()
                 metrics["acc"] += (predicted == answer_id).sum().item()
                 for bs, qid in enumerate(question_id):
@@ -128,7 +133,7 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
             batch['qsn_seq_len']        # length of qsns token ids
         )
         video_len = batch["video_len"]
-        object_len = batch["object_len"]
+        max_object_len = max(batch["object_len"])
 
         question_mask = (question != tokenizer.pad_token_id).float().cuda() #RobBERETa
         answer_mask = (answer!=tokenizer.pad_token_id).float().cuda() #RobBERETa
@@ -138,9 +143,11 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
         print("video_o shape:", video_o.size())
         video_mask = get_mask(video_len, video_o.size(1)).cuda()
         print("video_mask:", video_mask.size())
-        object_mask = get_mask(video_o.size(2), object_len, dim=2).cuda()
-        print("object_mask:", object_mask.size())
-       
+        # object_mask = get_mask(video_o.size(2), object_len).bool().cuda()
+        object_mask = (torch.arange(max_object_len).unsqueeze(1).to(video_o.device) < video_o.size(2)).repeat(1, max_object_len)
+        print("object_mask:", object_mask)
+        print("object_mask size:", object_mask.size())
+
         qsn_mask = (qsn_token_ids != tokenizer.pad_token_id).float().cuda()
         
         video = (video_o, video_f)

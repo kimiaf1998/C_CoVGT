@@ -79,8 +79,8 @@ class TubeDecoder(nn.Module):
         self,
         object_encoding, # (bs, t, numr, dmodel)
         vt_encoding, # (bs, numc, dmodel)
-        object_mask, # (bs, t, numr)
-        vt_mask, # (bs, t)
+        object_mask, # (numr, numr)
+        vt_mask, # (bs, numc)
     ):
         """The forward expects a NestedTensor, which consists of:
            - samples.tensor: batched frames, of shape [n_frames x 3 x H x W]
@@ -101,12 +101,14 @@ class TubeDecoder(nn.Module):
         _, numc, _ = vt_encoding.size()
         numf = t//numc
         query_encoding = object_encoding.view(num_queries, bs*t, -1) # (num_queries, bs*t, dmodel)
-        vt_encoding = vt_encoding.view(1, bs*numc, -1).repeat(numf, 1, 1) # (1, bs*t, dmodel)
+        vt_encoding = vt_encoding.flatten(0,1).unsqueeze(0).repeat(1, numf, 1) # (bs, numc, dmodel) -> (bs*numc, dmodel)
+                                                                            # -> (1, bs*numc, dmodel)-> (1, bs*t, dmodel)
+        vt_mask.reshape(bs * numc, -1).repeat(numf, 1) # (bs, numc) -> (bs*numc, 1) -> (bs*t,1)
         hs = self.transformer(
             query_encoding=query_encoding,  # (num_queries)x(BT)xF
             vt_encoding=vt_encoding,  # (1)x(BT)xF
-            query_mask=object_mask.view(bs, -1),  # Bx(Txnum_queries)
-            vt_mask=vt_mask.view(bs*t, -1),  # (BT)x1
+            query_mask=object_mask,  # num_queriesxnum_queries)
+            vt_mask=vt_mask,  # (BT)x1
         )
         if self.guided_attn:
             hs, weights, cross_weights = hs
@@ -116,10 +118,11 @@ class TubeDecoder(nn.Module):
         if self.sted:
             outputs_sted = self.sted_embed(hs)
 
-        hs = hs.flatten(2, 3)  # n_layersxnum_queriesxbxtxf -> n_layersxnum_queriesx(b*t)xf
+        print("hs shape:", hs.shape)
+        hs = hs.flatten(1, 2)  # n_layersx(b*t)xnum_queriesxf
 
         outputs_coord = self.bbox_embed(hs).sigmoid()
-        out.update({"pred_boxes": outputs_coord[-1]}) # fetch last-layer output -> num_queriesx(b*t)x1
+        out.update({"pred_boxes": outputs_coord[-1]}) # fetch last-layer output ->  n_layersx(b*t)xnum_queriesxfx1
         if self.sted:
             out.update({"pred_sted": outputs_sted[-1]})
         if self.guided_attn:
@@ -140,7 +143,7 @@ class TubeDecoder(nn.Module):
                 if self.guided_attn:
                     out["aux_outputs"][i_aux]["weights"] = weights[i_aux]
                     out["aux_outputs"][i_aux]["ca_weights"] = cross_weights[i_aux]
-
+        
         return out
 
 

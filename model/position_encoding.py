@@ -24,7 +24,7 @@ class TimeEmbeddingLearned(nn.Module):
         nn.init.uniform_(self.time_embed.weight)
 
     def forward(self, ln):
-        return self.time_embed.weight[:ln].unsqueeze(1) # 1x(num_queries)xd_model
+        return self.time_embed.weight[:ln].unsqueeze(1) # lnx1xd_model (tx1xdmodel)
 
 
 class TimeEmbeddingSine(nn.Module):

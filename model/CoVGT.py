@@ -640,6 +640,7 @@ class VGT(nn.Module):
         video_mask=None,
         text_mask=None,
         object_mask=None,
+        att_mask=None,
         max_seq_len=0,
         seg_feats = None,
         seg_num = None,
@@ -713,22 +714,21 @@ class VGT(nn.Module):
 
 
                 # add learnable positional embedding
-                video_proj = self.position_v(video_proj)    #(bs, numc, dmodal)
+                video_proj = self.position_v(video_proj)    # (bs, numc, dmodal)
                 # global transformer to capture temporal relations between video contents
-                attended_v = self.mmt(x=video_proj, attn_mask=video_mask)[0]
+                attended_v = self.mmt(x=video_proj, attn_mask=video_mask)[0] # (bs, numc, dmodal)
 
                 # predict answer bboxes (tube decoder)
                 video_o, _ = video[0], video[1]
-
-                bsize, numc, numf, numr, fdim = video_o.size()  # (bsize, n clips,n frames, n regions, feat dim)
-
                 X = self.encode_vid(video_o)  # (bs, numc*numf, numr, dmodel)
-                X = X.view(bsize, numc, numf, numr, -1)
 
-
-                # TODO use tube output and return as  head predictions
+                # TODO use tube output and return as head predictions
+                print("X shape:", X.shape)
+                print("vt shape:", attended_v.shape)
+                print("object_mask shape:", object_mask.shape)
+                print("video_mask shape:", video_mask.shape)
                 tube = self.tube_detector(object_encoding=X, vt_encoding=attended_v,
-                                          query_mask=object_mask, vt_mask=video_mask)
+                                          object_mask=object_mask, vt_mask=video_mask.bool())
 
                 # TODO add localization loss
 

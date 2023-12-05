@@ -243,7 +243,7 @@ def get_args():
 
     parser.add_argument(
         "--position_embedding",
-        default="sine",
+        default="learned",
         type=str,
         choices=("sine", "learned"),
         help="Type of positional embedding to use on top of the image features",
@@ -255,12 +255,6 @@ def get_args():
         default=6,
         type=int,
         help="Number of decoding layers in the transformer",
-    )
-    parser.add_argument(
-        "--loc_hidden_dim",
-        default=256,
-        type=int,
-        help="Size of the embeddings (dimension of the transformer)",
     )
     parser.add_argument(
         "--num_queries",

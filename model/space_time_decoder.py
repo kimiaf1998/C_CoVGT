@@ -97,20 +97,27 @@ class Transformer(nn.Module):
 
     def forward(
         self,
-        query_embed,
+        query_encoding,
         vt_encoding,
         query_mask=None,
         vt_mask=None,
+        video_max_len=32,
     ):
 
         # time-space-text attention
-        # t = numc*numf
+        n_queries, bt, d_model = query_encoding.size()
+        bsize = bt//video_max_len
+        time_pos = self.time_embed(video_max_len).repeat(bsize, n_queries,1).transpose(0,1)
+
+        print("** SPACE TIME DECODER **")
+        print("query_encoding shape:", query_encoding.shape)
+        print("time_pos shape:", time_pos.shape)
         hs = self.decoder(
-            query_embed=query_embed,  # n_queriesx(bsize*t)xd_model
-            vt_encoding=vt_encoding,  # (bsize*t)x1xd_model
+            query_encoding=query_encoding,  # n_queriesx(bsize*t)xd_model
+            vt_encoding=vt_encoding,  # 1x(bsize*t)xd_model
             query_mask=query_mask,  # (bsize*t)xn_queries
             vt_mask=vt_mask, # (bsizext)x1
-            query_pos=self.time_embed, # n_queriesxd_model
+            query_pos=time_pos, # (bsize*t)xn_queriesxd_model
         )  # n_layersxn_queriesx(bsize*t)xdmodel
         if self.return_weights:
             hs, weights, cross_weights = hs
@@ -234,6 +241,9 @@ class TransformerDecoderLayer(nn.Module):
 
         q = self.with_pos_embed(query, query_pos)
         k = v = query
+        print("query shape:", query.shape)
+        print("vt_encoding shape:", vt_encoding.shape)
+        print("vt_mask shape:", vt_mask.shape)
         # Temporal Self attention
         tgt2, weights = self.self_attn(
             q,
@@ -259,8 +269,7 @@ class TransformerDecoderLayer(nn.Module):
             query=self.with_pos_embed(tgt_cross, query_pos_cross),
             key=vt_encoding,
             value=vt_encoding,
-            attn_mask=att_mask,
-            key_padding_mask=vt_mask,
+            # key_padding_mask=vt_mask, # TODO expecting key_padding_mask shape of (2048, 1), but got torch.Size([64, 8])
         ) # 1x(b*t)xf
 
         tgt2 = tgt2.view(b, t, f).transpose(0, 1)  # 1x(b*t)xf -> bxtxf -> txbxf
@@ -293,7 +302,7 @@ def _get_clones(module, N):
 
 def build_transformer(args):
     return Transformer(
-        d_model=args.loc_hidden_dim,
+        d_model=args.embd_dim,
         dropout=args.dropout,
         nhead=args.n_heads,
         dim_feedforward=args.ff_dim,

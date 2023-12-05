@@ -238,7 +238,6 @@ class VideoQADataset(Dataset):
 
         numc, numf, numr, d_model = video_o.shape
         vid_duration = numc
-        num_objects = np.full((numc*numf, 1), self.bbox_num)
         # extract topk regions
         # video_o = video_o[:,:,:5,:]
 
@@ -379,7 +378,7 @@ class VideoQADataset(Dataset):
             "video_o": video_o,
             "video_f": video_f,
             "video_len": vid_duration,
-            "object_len": num_objects,
+            "object_len": self.bbox_num,
             "question": question_embd,
             "question_txt": question_txt,
             "type": qtype,
