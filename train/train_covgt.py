@@ -184,7 +184,6 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
             predicts = torch.bmm(answer_proj, fusion_proj).squeeze()
 
         print("** Processing Tube Predictions")
-        print("target bboxes shape:", batch["bboxes"].shape)
         print("target bboxes:", batch["bboxes"][10])
         # only keep box predictions in the annotated moment
         device = tube_pred["pred_boxes"].device
@@ -245,7 +244,8 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
                 true_indices = torch.where(tube_pred["pred_boxes"][i, j, :, 0])[0]
                 if true_indices.numel() > 0:
                     # Assign the corresponding bboxes to selected_bboxes
-                    selected_bboxes[i, j, true_indices] = bboxes[i, j, true_indices]
+                    # TODO pass bbox_loc as well (fr)
+                    selected_bboxes[i, j, true_indices] = bbox_locs[i, j, true_indices]
 
         print("selected_bbox [0][5]", selected_bboxes[0][5])
 
@@ -255,6 +255,16 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         )
 
         # TODO
+
+        # mask with padded positions set to False for loss computation
+        if args.sted:
+            time_mask = torch.zeros(b, outputs["pred_sted"].shape[1]).bool().to(device)
+            for i_dur, duration in enumerate(video_len): # video_len -> max_clip_len
+                numc = video_o.size(2)
+                duration *= numc
+                time_mask[i_dur, :duration] = True
+        else:
+            time_mask = None
 
         # compute losses
         loss_dict = {}
@@ -280,7 +290,7 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
                 time_mask = None
 
             if criterion is not None:
-                loss_dict.update(criterion(outputs, targets, inter_idx, time_mask))
+                loss_dict.update(loc_criterion(outputs, targets, inter_idx, time_mask))
 
         loss_dict.update({"loss_vqa": vqa_loss})
 
