@@ -23,6 +23,7 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
 	--pretrain_path=../data/save_models/webvid180K/co_e1.pth \
 	--num_queries=10 \
 	--ema \
+	--no_guided_attn \
 
 	
 	

@@ -631,12 +631,11 @@ class VGT(nn.Module):
         return X
 
     def get_spatio_temporal_localization(self, object_encoding, vt_encoding, object_mask, vt_mask):
-        X = self.encode_vid(object_encoding)  # (bs, numc*numf, numr, dmodel)
-        print("X shape:", X.shape)
+        print("object_encoding shape:", object_encoding.shape)
         print("vt shape:", vt_encoding.shape)
         print("object_mask shape:", object_mask.shape)
         print("video_mask shape:", vt_mask.shape)
-        tube_preds = self.tube_detector(object_encoding=X, vt_encoding=vt_encoding,
+        tube_preds = self.tube_detector(object_encoding=object_encoding, vt_encoding=vt_encoding,
                                         object_mask=object_mask, vt_mask=vt_mask.bool())
         return tube_preds
 
@@ -737,11 +736,8 @@ class VGT(nn.Module):
                 video_o, _ = video[0], video[1]
                 X = self.encode_vid(video_o)  # (bs, numc*numf, numr, dmodel)
 
-                # TODO use tube output and return as head predictions
                 tube_preds = self.get_spatio_temporal_localization(object_encoding=X, vt_encoding=attended_v,
                                                       object_mask=object_mask, vt_mask=video_mask.bool())
-
-                # TODO add localization loss
 
                 # mean-pool to obtain global reps
                 global_feat = attended_v.mean(dim=1)        #(bs, dmodal)

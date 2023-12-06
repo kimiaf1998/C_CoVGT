@@ -111,9 +111,12 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
     return metrics["acc"] / count, results
 
 
-def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args, tokenizer):
+def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weight_dict, scheduler, epoch, args, tokenizer):
     model.train()
-    running_vqa_loss, running_acc, running_mlm_loss, running_cl_loss = (
+    running_vqa_loss, running_acc, running_mlm_loss, running_cl_loss, running_bbox_loss, running_giou_loss, running_sted_loss = (
+        AverageMeter(),
+        AverageMeter(),
+        AverageMeter(),
         AverageMeter(),
         AverageMeter(),
         AverageMeter(),
@@ -181,26 +184,30 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
             predicts = torch.bmm(answer_proj, fusion_proj).squeeze()
 
         print("** Processing Tube Predictions")
+        print("target bboxes shape:", batch["bboxes"].shape)
+        print("target bboxes:", batch["bboxes"][10])
         # only keep box predictions in the annotated moment
         device = tube_pred["pred_boxes"].device
         inter_idx = batch["inter_idx"]
         frame_mapping = batch["frame_map"]
         keep_list = []
-        for i_dur, inter in enumerate(inter_idx):
-            start_t, end_t = inter[0], inter[1]
-            start_t_mapped = frame_mapping[i_dur][start_t]
-            end_t_mapped = frame_mapping[i_dur][end_t]
-            keep_list.extend(
-                [
-                    elt
-                    for elt in range(
-                    start_t_mapped,
-                    end_t_mapped + 1,
-                )
-                ]
-            )
-        keep = torch.tensor(keep_list).long().to(device)
-        print("keep indices: ", keep)
+        # TODO substitute this with bbox masks (keep the ones that mask == 1)
+        # for i_dur, inter in enumerate(inter_idx):
+        #     start_t, end_t = inter[0], inter[1]
+        #     # TODO find closest frame in frame_mapping
+        #     start_t_mapped = frame_mapping[i_dur][start_t]
+        #     end_t_mapped = frame_mapping[i_dur][end_t]
+        #     keep_list.extend(
+        #         [
+        #             elt
+        #             for elt in range(
+        #             start_t_mapped,
+        #             end_t_mapped + 1,
+        #         )
+        #         ]
+        #     )
+        # keep = torch.tensor(keep_list).long().to(device)
+        # print("keep indices: ", keep)
         # TODO maybe keep all the boxes and base o bboxes predict time
         print("pred_boxes before:", tube_pred["pred_boxes"].shape)
         # tube_pred["pred_boxes"] = tube_pred["pred_boxes"][keep]
@@ -211,9 +218,15 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
         #     ][keep]
         # b = len(durations)
 
-        # targets = [
-        #     x for x in bboxes if len(x["boxes"])
-        # ]  # keep only targets in the annotated moment
+        # bboxes -> (bs, t, 1, 4)
+
+        empty_box = torch.zeros((1, 4), dtype=torch.float32)
+        print('All target bbox len:', len(bboxes.ravel()))
+        targets = [
+            x for x in bboxes for bbox in x if bbox != empty_box
+        ]  # keep only targets in the annotated moment
+
+        print('Non-empty target bbox len:', len(targets))
 
         # tube_pred["pred_boxes"] -> (bs*t)xnum_queriesx1
         # bboxes -> bsxtxnum_queriesx4
@@ -243,16 +256,34 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
 
         # TODO
 
+        # compute losses
+        loss_dict = {}
         if args.dataset == "ivqa":
             a = (answer_id / 2).clamp(max=1).cuda()
-            vqa_loss = criterion(predicts, a)
+            vqa_loss = qa_criterion(predicts, a)
             predicted = torch.max(predicts, dim=1).indices.cpu()
             predicted = F.one_hot(predicted, num_classes=len(a2v))
             running_acc.update((predicted * a.cpu()).sum().item() / N, N)
         else:
-            vqa_loss = criterion(predicts, answer_id.cuda())
+            vqa_loss = qa_criterion(predicts, answer_id.cuda())
             predicted = torch.max(predicts, dim=1).indices.cpu()
             running_acc.update((predicted == answer_id).sum().item() / N, N)
+
+
+            # mask with padded positions set to False for loss computation
+            # TODO
+            if args.sted:
+                time_mask = torch.zeros(b, outputs["pred_sted"].shape[1]).bool().to(device)
+                for i_dur, duration in enumerate(durations):
+                    time_mask[i_dur, :duration] = True
+            else:
+                time_mask = None
+
+            if criterion is not None:
+                loss_dict.update(criterion(outputs, targets, inter_idx, time_mask))
+
+        loss_dict.update({"loss_vqa": vqa_loss})
+
         if args.cl_loss:
             vt_proj, txt_proj = model(
                 video,
@@ -268,6 +299,7 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
             vt_proj = vt_proj.unsqueeze(2)
             cl_predicts = torch.bmm(txt_proj, vt_proj).squeeze()
             cl_loss = criterion(cl_predicts, qsn_id.cuda())
+            loss_dict.update({"loss_cl": args.cl_loss*cl_loss})
             # cl_predicted = torch.max(cl_predicts, dim=1).indices.cpu()
             # running_acc.update((predicted == answer_id).sum().item() / N, N)
 
@@ -293,23 +325,30 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
                 max_seq_len=max_seq_len,
                 mode="mlm",
             )
+            loss_dict.update({"loss_mlm": mlm_loss})
             mlm_loss = mlm_loss.mean()
-            loss = mlm_loss + vqa_loss
-        if args.cl_loss:
-            loss = vqa_loss + args.cl_loss*cl_loss
-        if args.cl_loss and args.mlm_prob:
-            loss = vqa_loss + args.cl_loss*cl_loss + mlm_loss
-        if not args.cl_loss and not args.mlm_prob:
-            loss = vqa_loss
+            if not args.cl_loss:
+                loss = mlm_loss + vqa_loss
+                loss_dict.update({"loss_mlm": loss})
+
+        bbox_loss = loss_dict["loss_bbox"]
+        giou_loss = loss_dict["loss_giou"]
+        sted_loss = loss_dict["loss_sted"]
+        losses = sum(
+            loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict
+        )
 
         optimizer.zero_grad()
-        loss.backward()
+        losses.backward()
         if args.clip:
             nn.utils.clip_grad_norm_(model.parameters(), max_norm=args.clip)
         optimizer.step()
         scheduler.step()
 
         running_vqa_loss.update(vqa_loss.detach().cpu().item(), N)
+        running_giou_loss.update(giou_loss.detach().cpu().item(), N)
+        running_bbox_loss.update(bbox_loss.detach().cpu().item(), N)
+        running_vqa_loss.update(sted_loss.detach().cpu().item(), N)
         if args.mlm_prob:
             running_mlm_loss.update(mlm_loss.detach().cpu().item(), N)
         if args.cl_loss:

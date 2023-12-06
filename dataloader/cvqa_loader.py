@@ -216,17 +216,40 @@ class VideoQADataset(Dataset):
 
         return region_feats, app_feats
 
+    def filter_bboxes_by_sampled_clips(self, data, vid_clips):
+
+        # Get the list of frame IDs from the video_data dictionary
+        frame_ids = [frame_id for frame_ids_list in vid_clips for frame_id in frame_ids_list]
+
+        # Iterate through the annotations and filter based on frame IDs
+        filtered_bboxes = []
+        # TODO define bbox masks not to include in loss calculation
+        mask_bboxes = []
+
+        frame_map = []
+        # each frame has 1 bbox at most
+        empty_box = torch.zeros((1, 4), dtype=torch.float32)
+        if "bboxes" in data:
+            frame_bboxes = data["bboxes"]
+            for idx, frame_id in enumerate(frame_ids):
+                if frame_id in frame_bboxes:
+                    bboxes = frame_bboxes.get(frame_id)
+                    if bboxes is None:
+                        bboxes = empty_box
+                    else:
+                        bboxes = torch.as_tensor(bboxes, dtype=torch.float32).unsqueeze(0)
+                else:
+                    bboxes = empty_box
+                frame_map.append(frame_id)
+                filtered_bboxes.append(bboxes)
+        return filtered_bboxes, frame_map
     def __getitem__(self, index):
         
         cur_sample = self.data.loc[index]
         start_t = cur_sample['start']
         end_t = cur_sample['end']
-        bboxes = cur_sample['bboxes'].values()
         # a dict containing mapping of fram id to frame idx (32 sampled)
         idx = 0
-        frame_map = {}
-        for f_num in cur_sample['bboxes'].keys():
-            frame_map[f_num] = idx
         vid_id = cur_sample["video_id"]
         vid_id = str(vid_id)
         fps = self.fps_map[vid_id]
@@ -234,6 +257,9 @@ class VideoQADataset(Dataset):
             qid =  str(cur_sample['question_id'])
         else:
             qid =  str(cur_sample['qid'])
+
+        bboxes, frame_map = self.filter_bboxes_by_sampled_clips(cur_sample, self.vid_clips[qid])
+
         if 'width' not in cur_sample:
             #msrvtt
             width, height = 320, 240

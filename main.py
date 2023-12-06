@@ -12,7 +12,7 @@ from args import get_args
 from model.CoVGT import VGT
 from loss import LogSoftmax
 from model.space_time_decoder import build_transformer
-from model.tubedetr import TubeDecoder
+from model.tubedetr import TubeDecoder, build
 from util import compute_a2v, load_model_by_key, save_to
 from dataloader.cvqa_loader import get_videoqa_loaders
 from train.train_covgt import train, eval
@@ -52,16 +52,9 @@ def main(args):
 
     # Model
     # Space-time decoder
-    transformer = build_transformer(args)
 
-    tube_detector = TubeDecoder(
-        transformer,
-        num_queries=args.num_queries,
-        aux_loss=args.aux_loss,
-        video_max_len=args.video_max_len,
-        guided_attn=args.guided_attn,
-        sted=args.sted,
-    )
+    tube_detector, loc_criterion = build(args)
+    loc_criterion.cuda()
 
     model = VGT(
         tokenizer = tokenizer,
@@ -82,6 +75,16 @@ def main(args):
     )
     model.cuda()
     logging.info("Using {} GPUs".format(torch.cuda.device_count()))
+
+
+    weight_dict = {
+        "loss_bbox": args.bbox_loss_coef,
+        "loss_giou": args.giou_loss_coef,
+        "loss_sted": args.sted_loss_coef,
+        "loss_vqa": 1,
+        "loss_cl": args.cl_loss,
+        "loss_mlm": 1,
+    }
 
     # Load pretrain path
     model = nn.DataParallel(model)
@@ -107,13 +110,13 @@ def main(args):
         logging.info("number of val instances: {}".format(len(val_loader.dataset)))
 
    
-    criterion = nn.CrossEntropyLoss(ignore_index=-1)
+    qa_criterion = nn.CrossEntropyLoss(ignore_index=-1)
     # criterion = MultipleChoiceLoss()
     params_for_optimization = list(p for p in model.parameters() if p.requires_grad)
     optimizer = optim.Adam(
         params_for_optimization, lr=args.lr, weight_decay=args.weight_decay
     )
-    criterion.cuda()
+    qa_criterion.cuda()
 
     # Training
     if not args.test:
@@ -130,7 +133,7 @@ def main(args):
         best_val_acc = 0 if args.pretrain_path == "" else val_acc
         best_epoch = 0
         for epoch in range(args.epochs):
-            train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args, tokenizer)
+            train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weight_dict, scheduler, epoch, args, tokenizer)
             val_acc, results = eval(model, val_loader, a2v, args, test=False, tokenizer=tokenizer)
             if val_acc > best_val_acc:
                 best_val_acc = val_acc

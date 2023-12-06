@@ -47,7 +47,6 @@ class TubeDecoder(nn.Module):
         self,
         transformer,
         num_queries,
-        aux_loss=False,
         video_max_len=8*4,
         guided_attn=False,
         sted=True,
@@ -55,7 +54,6 @@ class TubeDecoder(nn.Module):
         """
         :param transformer: transformer model
         :param num_queries: number of object queries per frame
-        :param aux_loss: whether to use auxiliary losses at every decoder layer
         :param video_max_len: maximum number of frames in the model
         :param guided_attn: whether to use guided attention loss
         :param sted: whether to predict start and end proba
@@ -66,8 +64,6 @@ class TubeDecoder(nn.Module):
         hidden_dim = transformer.d_model
         self.bbox_embed = MLP(hidden_dim, hidden_dim, 1, 3) # bool (is the ans or not)
         # self.query_embed = nn.Embedding(num_queries, hidden_dim)
-
-        self.aux_loss = aux_loss
 
         self.video_max_len = video_max_len
         self.guided_attn = guided_attn
@@ -128,21 +124,6 @@ class TubeDecoder(nn.Module):
         if self.guided_attn:
             out["weights"] = weights[-1]
             out["ca_weights"] = cross_weights[-1]
-
-        # auxiliary outputs
-        if self.aux_loss:
-            out["aux_outputs"] = [
-                {
-                    "pred_boxes": b,
-                }
-                for b in outputs_coord[:-1]
-            ]
-            for i_aux in range(len(out["aux_outputs"])):
-                if self.sted:
-                    out["aux_outputs"][i_aux]["pred_sted"] = outputs_sted[i_aux]
-                if self.guided_attn:
-                    out["aux_outputs"][i_aux]["weights"] = weights[i_aux]
-                    out["aux_outputs"][i_aux]["ca_weights"] = cross_weights[i_aux]
 
         return out
 
@@ -354,30 +335,17 @@ class SetCriterion(nn.Module):
 
 
 def build(args):
-    device = torch.device(args.device)
     transformer = build_transformer(args)
 
-    model = TubeDecoder(
+    tube_detector = TubeDecoder(
         transformer,
         num_queries=args.num_queries,
-        aux_loss=args.aux_loss,
         video_max_len=args.video_max_len,
         guided_attn=args.guided_attn,
         sted=True,
     )
-    weight_dict = {
-        "loss_bbox": args.bbox_loss_coef,
-        "loss_giou": args.giou_loss_coef,
-        "loss_sted": args.sted_loss_coef,
-    }
     if args.guided_attn:
         weight_dict["loss_guided_attn"] = args.guided_attn_loss_coef
-
-    if args.aux_loss:
-        aux_weight_dict = {}
-        for i in range(args.dec_layers - 1):
-            aux_weight_dict.update({k + f"_{i}": v for k, v in weight_dict.items()})
-        weight_dict.update(aux_weight_dict)
 
     losses = ["boxes", "sted"] if args.sted else ["boxes"]
     if args.guided_attn:
@@ -387,6 +355,5 @@ def build(args):
         losses=losses,
         sigma=args.sigma,
     )
-    criterion.to(device)
 
-    return model, criterion, weight_dict
+    return tube_detector, criterion
