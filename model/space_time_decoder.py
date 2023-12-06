@@ -5,7 +5,8 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 from typing import List, Optional
 
-from model.position_encoding import TimeEmbeddingLearned, TimeEmbeddingSine
+from model.position_encoding import TimeEmbeddingLearned, TimeEmbeddingSine, PositionalEmbeddingLearned, \
+    PositionalEncoding2D, PositionalEncoding1D
 
 
 class Transformer(nn.Module):
@@ -20,6 +21,7 @@ class Transformer(nn.Module):
         return_intermediate_dec=False,
         pass_pos_and_query=True,
         video_max_len=8*4,
+        obj_max_num=10, # TODO pass from the step before
         no_tsa=False,
         return_weights=False,
         learn_time_embed=True,
@@ -69,11 +71,12 @@ class Transformer(nn.Module):
 
         self.learn_time_embed = learn_time_embed
         self.use_time_embed = not no_time_embed
-        if self.use_time_embed:
-            if learn_time_embed:
-                self.time_embed = TimeEmbeddingLearned(video_max_len, d_model)
-            else:
-                self.time_embed = TimeEmbeddingSine(video_max_len, d_model)
+        # if self.use_time_embed:
+        #     if learn_time_embed:
+        #         self.time_embed = TimeEmbeddingLearned(video_max_len, d_model)
+        #     else:
+        #         self.time_embed = TimeEmbeddingSine(video_max_len, d_model)
+        self.obj_embed = PositionalEncoding1D(d_model)
 
         self.rd_init_tsa = rd_init_tsa
         self._reset_temporal_parameters()
@@ -107,17 +110,18 @@ class Transformer(nn.Module):
         # time-space-text attention
         n_queries, bt, d_model = query_encoding.size()
         bsize = bt//video_max_len
-        time_pos = self.time_embed(video_max_len).repeat(bsize, n_queries,1).transpose(0,1)
+        obj_pos = self.obj_embed(query_encoding.transpose(0, 1)) # n_queriesx(bsize*t)xd_model -> (bsize*t)xn_queriesxd_model
+        # time_pos = self.time_embed(video_max_len).repeat(bsize, n_queries,1).transpose(0,1)
 
         print("** SPACE TIME DECODER **")
         print("query_encoding shape:", query_encoding.shape)
-        print("time_pos shape:", time_pos.shape)
+        print("time_pos shape:", obj_pos.shape)
         hs = self.decoder(
             query_encoding=query_encoding,  # n_queriesx(bsize*t)xd_model
             vt_encoding=vt_encoding,  # 1x(bsize*t)xd_model
             query_mask=query_mask,  # (bsize*t)xn_queries
             vt_mask=vt_mask, # (bsizext)x1
-            query_pos=time_pos, # (bsize*t)xn_queriesxd_model
+            query_pos=obj_pos.transpose(0, 1), # n_queriesx(bsize*t)xd_model
         )  # n_layersxn_queriesx(bsize*t)xdmodel
         if self.return_weights:
             hs, weights, cross_weights = hs

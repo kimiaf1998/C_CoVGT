@@ -629,7 +629,17 @@ class VGT(nn.Module):
         #max pool over different candicates
         X = Xatt.view(bsize, ans_n, xlen, -1).max(dim=1)[0] 
         return X
-    
+
+    def get_spatio_temporal_localization(self, object_encoding, vt_encoding, object_mask, vt_mask):
+        X = self.encode_vid(object_encoding)  # (bs, numc*numf, numr, dmodel)
+        print("X shape:", X.shape)
+        print("vt shape:", vt_encoding.shape)
+        print("object_mask shape:", object_mask.shape)
+        print("video_mask shape:", vt_mask.shape)
+        tube_preds = self.tube_detector(object_encoding=X, vt_encoding=vt_encoding,
+                                        object_mask=object_mask, vt_mask=vt_mask.bool())
+        return tube_preds
+
     def forward(
         self,
         video,
@@ -701,6 +711,11 @@ class VGT(nn.Module):
                 video_proj = self.get_vqa_embedding_rfcpos(video, question_w, seq_len)
                 video_proj = self.position_v(video_proj)
                 attended_qv = self.mmt(x=video_proj, attn_mask=video_mask)[0]
+
+                #  predict answer bboxes (tube decoder)
+                tube_preds = self.get_spatio_temporal_localization(object_encoding=X, vt_encoding=attended_qv,
+                                                      object_mask=object_mask, vt_mask=video_mask.bool())
+
                 global_feat = attended_qv.mean(dim=1)
                 fusion_proj = self.vqproj(global_feat)
             else:
@@ -723,12 +738,8 @@ class VGT(nn.Module):
                 X = self.encode_vid(video_o)  # (bs, numc*numf, numr, dmodel)
 
                 # TODO use tube output and return as head predictions
-                print("X shape:", X.shape)
-                print("vt shape:", attended_v.shape)
-                print("object_mask shape:", object_mask.shape)
-                print("video_mask shape:", video_mask.shape)
-                tube = self.tube_detector(object_encoding=X, vt_encoding=attended_v,
-                                          object_mask=object_mask, vt_mask=video_mask.bool())
+                tube_preds = self.get_spatio_temporal_localization(object_encoding=X, vt_encoding=attended_v,
+                                                      object_mask=object_mask, vt_mask=video_mask.bool())
 
                 # TODO add localization loss
 
@@ -758,13 +769,13 @@ class VGT(nn.Module):
             if fusion_proj is not None and answer_g.device != fusion_proj.device:
                 answer_g = answer_g.to(fusion_proj.device)
             if answer is not None:  # mc , answer is a list of tokens
-                return fusion_proj, answer_g
+                return fusion_proj, answer_g, tube_preds
                 # return self.final_proj(fusion_proj*answer_g), answer_g
             else:
                 # pred = self.final_proj(fusion_proj*question_g)
                 # pred = fusion_proj @ answer_g.t()
                 pred = (fusion_proj @ answer_g.t()) * (question_g @ answer_g.t())
-                return pred
+                return pred, tube_preds
 
         elif mode == "mlm":
             if text_mask.shape[1] < max_seq_len:

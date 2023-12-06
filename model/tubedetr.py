@@ -122,7 +122,7 @@ class TubeDecoder(nn.Module):
         hs = hs.flatten(1, 2)  # n_layersx(b*t)xnum_queriesxf
 
         outputs_coord = self.bbox_embed(hs).sigmoid()
-        out.update({"pred_boxes": outputs_coord[-1]}) # fetch last-layer output ->  n_layersx(b*t)xnum_queriesxfx1
+        out.update({"pred_boxes": outputs_coord[-1]}) # fetch last-layer output ->  (b*t)xnum_queriesx1
         if self.sted:
             out.update({"pred_sted": outputs_sted[-1]})
         if self.guided_attn:
@@ -143,7 +143,7 @@ class TubeDecoder(nn.Module):
                 if self.guided_attn:
                     out["aux_outputs"][i_aux]["weights"] = weights[i_aux]
                     out["aux_outputs"][i_aux]["ca_weights"] = cross_weights[i_aux]
-        
+
         return out
 
 

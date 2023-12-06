@@ -65,6 +65,7 @@ class VideoQADataset(Dataset):
 
         if self.dset == 'STAR':
             self.vid_clips = load_file(osp.dirname(annotation_path)+f'/clips_{self.mode}.json')
+            self.fps_map = load_file(osp.dirname(annotation_path)+f'/vid_fps_mapping.json')
 
         if self.dset == 'causalvid':
             data_dir = osp.dirname(csv_path)
@@ -218,8 +219,17 @@ class VideoQADataset(Dataset):
     def __getitem__(self, index):
         
         cur_sample = self.data.loc[index]
+        start_t = cur_sample['start']
+        end_t = cur_sample['end']
+        bboxes = cur_sample['bboxes'].values()
+        # a dict containing mapping of fram id to frame idx (32 sampled)
+        idx = 0
+        frame_map = {}
+        for f_num in cur_sample['bboxes'].keys():
+            frame_map[f_num] = idx
         vid_id = cur_sample["video_id"]
         vid_id = str(vid_id)
+        fps = self.fps_map[vid_id]
         if self.dset == 'STAR':
             qid =  str(cur_sample['question_id'])
         else:
@@ -391,7 +401,11 @@ class VideoQADataset(Dataset):
             "seg_num": seg_num,
             "qsn_id": qsn_id,
             "qsn_token_ids": qsn_token_ids,
-            "qsn_seq_len": qsn_seq_len
+            "qsn_seq_len": qsn_seq_len,
+            "inter_idx": (start_t*fps, end_t*fps),
+            "fps": fps,
+            "bboxes": bboxes,
+            "frame_map": frame_map,
         }
 
 

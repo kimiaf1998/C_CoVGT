@@ -43,12 +43,11 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
             # object_mask = get_mask(object_len.flatten(0,1), max_object_num).bool().cuda()
             print("object_len:", max_object_len)
             object_mask = (torch.arange(max_object_len).unsqueeze(1).to(video_o.device) < video_o.size(2)).repeat(1, max_object_len)
-            print("object_mask:", object_mask)
             print("object_mask size:", object_mask.size())
             count += answer_id.size(0)
             video = (video_o, video_f)
             if not args.mc:
-                predicts = model(
+                predicts, tube_pred = model(
                     video,
                     question,
                     text_mask=question_mask,
@@ -79,7 +78,8 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                 # print('Model FLOPs:', flops.total()/1000000) #use batch_size 1
                 # break
                 ###################################
-                fusion_proj, answer_proj = model(
+                # TODO get tube output
+                fusion_proj, answer_proj, tube_pred = model(
                     video,
                     question,
                     text_mask=answer_mask,
@@ -101,7 +101,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                     results[qid] = {'prediction': int(predicted.numpy()[bs]), 'answer':int(answer_id.numpy()[bs])}
 
     step = "val" if not test else "test"
-    
+
     for k in metrics:
         # print(metrics[k], count)
         v = metrics[k] / count
@@ -120,7 +120,7 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
         AverageMeter()
     )
     for i, batch in enumerate(train_loader):
-        answer_id, answer, video_o, video_f, question, seg_feats, seg_num, qsn_id, qsn_token_ids, qsn_seq_len = (
+        answer_id, answer, video_o, video_f, question, seg_feats, seg_num, qsn_id, qsn_token_ids, qsn_seq_len, bboxes = (
             batch["answer_id"],         # answer id among a choices
             batch["answer"],            # answers (qsn + answers (choices)) token ids
             batch["video_o"].cuda(),    # region feats
@@ -130,7 +130,8 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
             batch['seg_num'],           # mc
             batch['qsn_id'],            # qsn id among q choice (used for contrastive learning)
             batch['qsn_token_ids'],     # qsns token ids
-            batch['qsn_seq_len']        # length of qsns token ids
+            batch['qsn_seq_len'],        # length of qsns token ids
+            batch['bboxes']        # visual answer locations
         )
         video_len = batch["video_len"]
         max_object_len = max(batch["object_len"])
@@ -145,17 +146,16 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
         print("video_mask:", video_mask.size())
         # object_mask = get_mask(video_o.size(2), object_len).bool().cuda()
         object_mask = (torch.arange(max_object_len).unsqueeze(1).to(video_o.device) < video_o.size(2)).repeat(1, max_object_len)
-        print("object_mask:", object_mask)
         print("object_mask size:", object_mask.size())
 
         qsn_mask = (qsn_token_ids != tokenizer.pad_token_id).float().cuda()
-        
+
         video = (video_o, video_f)
         N = answer_id.size(0)
         seq_len = batch["seq_len"]  # length of answers token ids
         if not args.mc:
             model.module._compute_answer_embedding(a2v)
-            predicts = model(
+            predicts, tube_pred = model(
                 video,
                 question,
                 text_mask=question_mask,
@@ -164,7 +164,7 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
                 seq_len = seq_len
             )
         else:
-            fusion_proj, answer_proj = model(
+            fusion_proj, answer_proj, tube_pred = model(
                 video,
                 question,
                 text_mask=answer_mask,
@@ -175,10 +175,73 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
                 seg_feats = seg_feats,
                 seg_num = seg_num
             )   # outputs video and answer representation
-                    
+
             fusion_proj = fusion_proj.unsqueeze(2)
             # Calculates dot-product or video and answer repr. to find the best match
             predicts = torch.bmm(answer_proj, fusion_proj).squeeze()
+
+        print("** Processing Tube Predictions")
+        # only keep box predictions in the annotated moment
+        device = tube_pred["pred_boxes"].device
+        inter_idx = batch["inter_idx"]
+        frame_mapping = batch["frame_map"]
+        keep_list = []
+        for i_dur, inter in enumerate(inter_idx):
+            start_t, end_t = inter[0], inter[1]
+            start_t_mapped = frame_mapping[i_dur][start_t]
+            end_t_mapped = frame_mapping[i_dur][end_t]
+            keep_list.extend(
+                [
+                    elt
+                    for elt in range(
+                    start_t_mapped,
+                    end_t_mapped + 1,
+                )
+                ]
+            )
+        keep = torch.tensor(keep_list).long().to(device)
+        print("keep indices: ", keep)
+        # TODO maybe keep all the boxes and base o bboxes predict time
+        print("pred_boxes before:", tube_pred["pred_boxes"].shape)
+        # tube_pred["pred_boxes"] = tube_pred["pred_boxes"][keep]
+        # print("pred_boxes after:", tube_pred["pred_boxes"].shape)
+        # for i_aux in range(len(outputs["aux_outputs"])):
+        #     outputs["aux_outputs"][i_aux]["pred_boxes"] = outputs["aux_outputs"][i_aux][
+        #         "pred_boxes"
+        #     ][keep]
+        # b = len(durations)
+
+        # targets = [
+        #     x for x in bboxes if len(x["boxes"])
+        # ]  # keep only targets in the annotated moment
+
+        # tube_pred["pred_boxes"] -> (bs*t)xnum_queriesx1
+        # bboxes -> bsxtxnum_queriesx4
+
+        bs = len(batch)
+        t = tube_pred["pred_boxes"].size(0)//bs
+        tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, t, -1, 1)
+
+        # get 4 positions of each predicted bbox as True
+        # Use boolean indexing to select the bounding boxes
+        selected_bboxes = torch.zeros(bboxes.shape)  # Initialize tensor for selected bounding boxes
+
+        for i in range(bs):
+            for j in range(t):
+                # Get indices of True values in bboxes_pred for each batch and time step
+                true_indices = torch.where(tube_pred["pred_boxes"][i, j, :, 0])[0]
+                if true_indices.numel() > 0:
+                    # Assign the corresponding bboxes to selected_bboxes
+                    selected_bboxes[i, j, true_indices] = bboxes[i, j, true_indices]
+
+        print("selected_bbox [0][5]", selected_bboxes[0][5])
+
+        assert len(selected_bboxes) == len(tube_pred["pred_boxes"]), (
+            len(tube_pred["pred_boxes"]),
+            len(bboxes),
+        )
+
+        # TODO
 
         if args.dataset == "ivqa":
             a = (answer_id / 2).clamp(max=1).cuda()
@@ -188,7 +251,7 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
             running_acc.update((predicted * a.cpu()).sum().item() / N, N)
         else:
             vqa_loss = criterion(predicts, answer_id.cuda())
-            predicted = torch.max(predicts, dim=1).indices.cpu() 
+            predicted = torch.max(predicts, dim=1).indices.cpu()
             running_acc.update((predicted == answer_id).sum().item() / N, N)
         if args.cl_loss:
             vt_proj, txt_proj = model(
@@ -196,6 +259,7 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
                 question,
                 text_mask=qsn_mask,
                 video_mask=video_mask,
+                object_mask=object_mask,
                 answer=qsn_token_ids,
                 seq_len = qsn_seq_len,
                 seg_feats = seg_feats,
@@ -217,7 +281,7 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
                 max_seq_len = args.amax_words
             else:
                 inputs = batch["question"]
-            
+
             inputs, labels = mask_tokens(inputs, tokenizer, mlm_probability=args.mlm_prob)
             mlm_loss = model(
                 video,
@@ -225,6 +289,7 @@ def train(model, train_loader, a2v, optimizer, criterion, scheduler, epoch, args
                 labels=labels.cuda(),
                 text_mask=question_mask,
                 video_mask=video_mask,
+                object_mask=object_mask,
                 max_seq_len=max_seq_len,
                 mode="mlm",
             )
