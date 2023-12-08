@@ -352,7 +352,7 @@ def build(args):
         num_queries=args.num_queries,
         video_max_len=args.video_max_len,
         guided_attn=args.guided_attn,
-        sted=True,
+        sted=False,
     )
     # if args.guided_attn:
     #     weight_dict["loss_guided_attn"] = args.guided_attn_loss_coef

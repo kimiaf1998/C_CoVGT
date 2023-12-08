@@ -312,21 +312,21 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         bs, t, _, _ = tube_pred["pred_boxes"].size()
         print("bs:", bs)
         print("t:", t)
-        BB_THRESH = 0.5
-        for i in range(bs):
-            for j in range(t):
-                # Get indices of True values in bboxes_pred for each batch and time step
-                print(tube_pred["pred_boxes"][i, j, :, 0])
-                true_indices = torch.where(tube_pred["pred_boxes"][i, j, :, 0] > BB_THRESH)[0]
-                print("true indices:", true_indices)
-                if true_indices.numel() > 0:
-                    # Assign the corresponding bboxes to selected_bboxes
-
-                    selected_bboxes[i, j, true_indices] = video_b[i, j, true_indices]
-
-        # TODO maybe adding mask for False objects of check if an empty bbox in loss calculation
-        print("selected_bbox [0][5]", selected_bboxes[0][5])
-        tube_pred["pred_boxes"] = selected_bboxes.clone()
+        # BB_THRESH = 0.5
+        # for i in range(bs):
+        #     for j in range(t):
+        #         # Get indices of True values in bboxes_pred for each batch and time step
+        #         print(tube_pred["pred_boxes"][i, j, :, 0])
+        #         true_indices = torch.where(tube_pred["pred_boxes"][i, j, :, 0] > BB_THRESH)[0]
+        #         print("true indices:", true_indices)
+        #         if true_indices.numel() > 0:
+        #             # Assign the corresponding bboxes to selected_bboxes
+        #
+        #             selected_bboxes[i, j, true_indices] = video_b[i, j, true_indices]
+        #
+        # # TODO maybe adding mask for False objects of check if an empty bbox in loss calculation
+        # print("selected_bbox [0][5]", selected_bboxes[0][5])
+        # tube_pred["pred_boxes"] = selected_bboxes.clone()
 
         # compute losses
         loss_dict = {}
