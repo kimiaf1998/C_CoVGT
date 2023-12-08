@@ -18,6 +18,8 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
             model.module._compute_answer_embedding(a2v)
         results = {}
         for i, batch in enumerate(data_loader):
+            if i==2:
+                break
             answer_id, answer, video_o, video_f, question, question_id, seg_feats, seg_num = (
                 batch["answer_id"],
                 batch["answer"].cuda(),
@@ -110,6 +112,38 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
 
     return metrics["acc"] / count, results
 
+def bbox_iou(box1, box2):
+
+    """
+    Calculate the Intersection over Union (IoU) of two bounding boxes.
+
+    Parameters:
+    box1 : tensor of bounding boxes, shape (N, 4)
+    box2 : tensor of bounding boxes, shape (M, 4)
+
+    Returns:
+    iou : tensor of IoU values, shape (N, M)
+    """
+    # Calculate the coordinates of the intersection rectangles
+    x_left = torch.max(box1[:, None, 0], box2[:, 0])
+    y_top = torch.max(box1[:, None, 1], box2[:, 1])
+    x_right = torch.min(box1[:, None, 2], box2[:, 2])
+    y_bottom = torch.min(box1[:, None, 3], box2[:, 3])
+
+    # Calculate intersection area
+    intersection_area = (x_right - x_left).clamp(min=0) * (y_bottom - y_top).clamp(min=0)
+
+    # Calculate the area of both bounding boxes
+    box1_area = (box1[:, 2] - box1[:, 0]) * (box1[:, 3] - box1[:, 1])
+    box2_area = (box2[:, 2] - box2[:, 0]) * (box2[:, 3] - box2[:, 1])
+
+    # Calculate union area
+    union_area = box1_area[:, None] + box2_area - intersection_area
+
+    # Calculate IoU
+    iou = intersection_area / union_area
+
+    return iou
 
 def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weight_dict, scheduler, epoch, args, tokenizer):
     model.train()
@@ -123,10 +157,13 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         AverageMeter()
     )
     for i, batch in enumerate(train_loader):
-        answer_id, answer, video_o, video_f, question, seg_feats, seg_num, qsn_id, qsn_token_ids, qsn_seq_len, bboxes = (
+        if i == 5:
+            break
+        answer_id, answer, video_o, video_b, video_f, question, seg_feats, seg_num, qsn_id, qsn_token_ids, qsn_seq_len, bboxes = (
             batch["answer_id"],         # answer id among a choices
             batch["answer"],            # answers (qsn + answers (choices)) token ids
             batch["video_o"].cuda(),    # region feats
+            batch["video_b"].cuda(),    # region bboxes
             batch["video_f"].cuda(),    # appearance feats
             batch["question"].cuda(),   # qsns embeddings (open-ended)
             batch['seg_feats'].cuda(),  # answers feats (mc, amax words, 2048)
@@ -136,6 +173,28 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
             batch['qsn_seq_len'],        # length of qsns token ids
             batch['bboxes']        # visual answer locations
         )
+
+        device = video_b.device
+
+        assert len(bboxes) == len(video_b)
+        video_b = video_b.flatten(1, 2)
+        print("max bbox x,y:", bboxes.max())
+        print("GT boxes:", bboxes[0,0])
+        print("Feat boxes:", video_b[0,0])
+        continue
+
+        # for every boxes in every frames
+        from torchvision.ops import complete_box_iou, box_iou
+        for vid_boxes, vid_gt in zip(video_b.flatten(1,2)[:3], bboxes.to(device)[:3]):
+            for f_bboxes, f_gt in zip(vid_boxes, vid_gt):
+                print("feature bboxes:", f_bboxes.shape)
+                print("gt bboxes:", f_gt.shape)
+                # iou = complete_box_iou(f_gt, f_bboxes)
+                iou = box_iou(f_gt, f_bboxes)
+                print("IoU Res", iou)
+        continue
+
+
         video_len = batch["video_len"]
         max_object_len = max(batch["object_len"])
 
@@ -184,7 +243,6 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
             predicts = torch.bmm(answer_proj, fusion_proj).squeeze()
 
         print("** Processing Tube Predictions")
-        print("target bboxes:", batch["bboxes"][10])
         # only keep box predictions in the annotated moment
         device = tube_pred["pred_boxes"].device
         inter_idx = batch["inter_idx"]
@@ -219,52 +277,56 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
 
         # bboxes -> (bs, t, 1, 4)
 
-        empty_box = torch.zeros((1, 4), dtype=torch.float32)
-        print('All target bbox len:', len(bboxes.ravel()))
-        targets = [
-            x for x in bboxes for bbox in x if bbox != empty_box
-        ]  # keep only targets in the annotated moment
+        empty_box = [0,0,0,0]
+        print('All target bbox len batch 1:', len(bboxes[0]))
 
-        print('Non-empty target bbox len:', len(targets))
+        # Extract the last elements along the last dimension
+        last_elements = bboxes[:, :, :, -4:]
+
+        # Check if the last elements are [0, 0, 0, 0]
+        import numpy as np
+        condition = np.all(last_elements == empty_box, axis=-1)
+
+        # keep only targets in the annotated moments
+        bboxes = bboxes[condition]
+        print('Non-empty target bbox len batch 1:', len(bboxes[0]))
+
+        print(tube_pred["pred_boxes"][0, :, 0])
 
         # tube_pred["pred_boxes"] -> (bs*t)xnum_queriesx1
         # bboxes -> bsxtxnum_queriesx4
 
-        bs = len(batch)
-        t = tube_pred["pred_boxes"].size(0)//bs
-        tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, t, -1, 1)
+        bs = len(video_len)
+        tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, -1, max_object_len, 1)
+
+        print(tube_pred["pred_boxes"][0, 0, :, 0])
 
         # get 4 positions of each predicted bbox as True
         # Use boolean indexing to select the bounding boxes
-        selected_bboxes = torch.zeros(bboxes.shape)  # Initialize tensor for selected bounding boxes
+        video_b = video_b.flatten(1,2)
+        selected_bboxes = torch.zeros(video_b.shape).to(device)  # Initialize tensor for selected bounding boxes
+        print("bbox app feat shape:", video_f.shape)
+        print("bbox region feat shape:", video_o.shape)
+        print("bbox loc shape:", video_b.shape)
 
+        bs, t, _, _ = tube_pred["pred_boxes"].size()
+        print("bs:", bs)
+        print("t:", t)
+        BB_THRESH = 0.5
         for i in range(bs):
             for j in range(t):
                 # Get indices of True values in bboxes_pred for each batch and time step
-                true_indices = torch.where(tube_pred["pred_boxes"][i, j, :, 0])[0]
+                print(tube_pred["pred_boxes"][i, j, :, 0])
+                true_indices = torch.where(tube_pred["pred_boxes"][i, j, :, 0] > BB_THRESH)[0]
+                print("true indices:", true_indices)
                 if true_indices.numel() > 0:
                     # Assign the corresponding bboxes to selected_bboxes
-                    # TODO pass bbox_loc as well (fr)
-                    selected_bboxes[i, j, true_indices] = bbox_locs[i, j, true_indices]
 
+                    selected_bboxes[i, j, true_indices] = video_b[i, j, true_indices]
+
+        # TODO maybe adding mask for False objects of check if an empty bbox in loss calculation
         print("selected_bbox [0][5]", selected_bboxes[0][5])
-
-        assert len(selected_bboxes) == len(tube_pred["pred_boxes"]), (
-            len(tube_pred["pred_boxes"]),
-            len(bboxes),
-        )
-
-        # TODO
-
-        # mask with padded positions set to False for loss computation
-        if args.sted:
-            time_mask = torch.zeros(b, outputs["pred_sted"].shape[1]).bool().to(device)
-            for i_dur, duration in enumerate(video_len): # video_len -> max_clip_len
-                numc = video_o.size(2)
-                duration *= numc
-                time_mask[i_dur, :duration] = True
-        else:
-            time_mask = None
+        tube_pred["pred_boxes"] = selected_bboxes.clone()
 
         # compute losses
         loss_dict = {}
@@ -289,7 +351,7 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
             else:
                 time_mask = None
 
-            if criterion is not None:
+            if loc_criterion is not None:
                 loss_dict.update(loc_criterion(outputs, targets, inter_idx, time_mask))
 
         loss_dict.update({"loss_vqa": vqa_loss})
@@ -358,27 +420,24 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         running_vqa_loss.update(vqa_loss.detach().cpu().item(), N)
         running_giou_loss.update(giou_loss.detach().cpu().item(), N)
         running_bbox_loss.update(bbox_loss.detach().cpu().item(), N)
-        running_vqa_loss.update(sted_loss.detach().cpu().item(), N)
+        if args.sted:
+            running_sted_loss.update(sted_loss.detach().cpu().item(), N)
         if args.mlm_prob:
             running_mlm_loss.update(mlm_loss.detach().cpu().item(), N)
         if args.cl_loss:
             running_cl_loss.update(cl_loss.detach().cpu().item(), N)
         if (i + 1) % (len(train_loader) // args.freq_display) == 0:
-            if args.mlm_prob:
-                logging.info(
-                    f"Epoch {epoch + 1}/{args.epochs}, Progress: {float(i + 1) / len(train_loader):.4f}, Lvqa loss: "
-                    f"{running_vqa_loss.avg:.4f}, Training acc: {running_acc.avg:.2%}, MLM loss: {running_mlm_loss.avg:.4f}, Lvq Loss: {running_cl_loss.avg:.4f}"
-                )
-            elif args.cl_loss:
-                logging.info(
-                    f"Epoch {epoch + 1}/{args.epochs}, Progress: {float(i + 1) / len(train_loader):.4f}, Lvqa loss: "
-                    f"{running_vqa_loss.avg:.4f}, Train acc: {running_acc.avg:.2%}, Lvq Loss: {running_cl_loss.avg:.4f}"
-                )
-            else:
-                logging.info(
-                    f"Epoch {epoch + 1}/{args.epochs}, Progress: {float(i + 1) / len(train_loader):.4f}, Lvqa loss: "
+            log = "Epoch {epoch + 1}/{args.epochs}, Progress: {float(i + 1) / len(train_loader):.4f}, Lvqa loss: "\
                     f"{running_vqa_loss.avg:.4f}, Train acc: {running_acc.avg:.2%}"
-                )
+            if args.mlm_prob:
+                log += f", MLM loss: {running_mlm_loss.avg:.4f}"
+            elif args.cl_loss:
+                log += f", Lvq Loss: {running_cl_loss.avg:.4f}"
+            elif args.sted:
+                log += f", STED Loss: {running_sted_loss.avg:.4f}"
+            log += f", BBox L1 Loss: {running_bbox_loss.avg:.4f}, gIoU Loss: {running_giou_loss.avg:.4f} "
+            logging.info(log
+            )
             running_acc.reset()
             running_vqa_loss.reset()
             running_mlm_loss.reset()

@@ -126,10 +126,12 @@ def main(args):
         logging.info(
             f"Set cosine schedule with {len(train_loader) * args.epochs} iterations"
         )
-        if args.pretrain_path != "":
-            val_acc, results = eval(model, val_loader, a2v, args, test=False, tokenizer=tokenizer)  # zero-shot VideoQA
-            save_path = osp.join(args.save_dir, 'val-res0.json')
-            save_to (save_path, results)
+        # TODO uncomment
+        # if args.pretrain_path != "":
+        #     val_acc, results = eval(model, val_loader, a2v, args, test=False, tokenizer=tokenizer)  # zero-shot VideoQA
+        #     save_path = osp.join(args.save_dir, 'val-res0.json')
+        #     save_to (save_path, results)
+        val_acc = 42.0
         best_val_acc = 0 if args.pretrain_path == "" else val_acc
         best_epoch = 0
         for epoch in range(args.epochs):

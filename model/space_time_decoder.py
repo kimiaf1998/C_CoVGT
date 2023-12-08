@@ -116,6 +116,22 @@ class Transformer(nn.Module):
         print("** SPACE TIME DECODER **")
         print("query_encoding shape:", query_encoding.shape)
         print("time_pos shape:", obj_pos.shape)
+
+        nan_count = torch.isnan(query_encoding).sum().item()
+
+        print(f"Number of NaN values in the query_encoding: {nan_count}")
+
+        nan_count = torch.isnan(vt_encoding).sum().item()
+
+        print(f"Number of NaN values in the vt_encoding: {nan_count}")
+
+        nan_count = torch.isnan(query_mask).sum().item()
+
+        print(f"Number of NaN values in the query_mask: {nan_count}")
+
+        nan_count = torch.isnan(vt_mask).sum().item()
+
+        print(f"Number of NaN values in the vt_mask: {nan_count}")
         hs = self.decoder(
             query_encoding=query_encoding,  # n_queriesx(bsize*t)xd_model
             vt_encoding=vt_encoding,  # 1x(bsize*t)xd_model
@@ -253,7 +269,7 @@ class TransformerDecoderLayer(nn.Module):
             q,
             k,
             value=v,
-            attn_mask=query_mask
+            # attn_mask=query_mask # TODO
         ) # bxtxf
 
         tgt = query + self.dropout1(tgt2)

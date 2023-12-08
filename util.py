@@ -48,6 +48,29 @@ def transform_bb(roi_bbox, width, height):
 
     return bbox_feat
 
+# def transform_bb(roi_bbox, vid_size):
+#     dshape = list(roi_bbox.shape)
+#     tmp_bbox = roi_bbox.reshape([-1, 4])
+#     if len(vid_size) == 1:
+#         width, height = vid_size[0]
+#         relative_bbox = tmp_bbox / np.asarray([width, height, width, height])
+#         relative_area = (tmp_bbox[:, 2] - tmp_bbox[:, 0] + 1) * \
+#                         (tmp_bbox[:, 3] - tmp_bbox[:, 1] + 1) / (width * height)
+#     else:
+#         vid_size = vid_size.reshape(-1, vid_size.shape[2])
+#         for bbox, size in zip(tmp_bbox, vid_size):
+#             print("size:", size)
+#             (width, height) = size
+#             relative_bbox = tmp_bbox / np.asarray([width, height, width, height])
+#             relative_area = (tmp_bbox[:, 2] - tmp_bbox[:, 0] + 1) * \
+#                             (tmp_bbox[:, 3] - tmp_bbox[:, 1] + 1)/ (width*height)
+#     relative_area = relative_area.reshape(-1, 1)
+#     bbox_feat = np.hstack((relative_bbox, relative_area))
+#     dshape[-1] += 1
+#     bbox_feat = bbox_feat.reshape(dshape)
+#
+#     return bbox_feat
+
 
 def compute_aggreeings(topk, answers, thresholds, names, metrics, ivqa=False):
     """ Updates metrics dictionary by computing aggreeings for different thresholds """

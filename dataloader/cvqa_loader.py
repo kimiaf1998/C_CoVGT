@@ -12,6 +12,7 @@ import os.path as osp
 import h5py
 import random as rd
 import numpy as np
+from PIL import Image
 
 class VideoQADataset(Dataset):
     def __init__(
@@ -138,7 +139,7 @@ class VideoQADataset(Dataset):
             roi_feat = self.bbox_feats[video_name][0][pick_ids]
             roi_bbox = self.bbox_feats[video_name][1][pick_ids]
         
-        bbox_feat = transform_bb(roi_bbox, width, height)
+        bbox_feat = transform_bb(roi_bbox, [(width, height)])
         roi_feat = torch.from_numpy(roi_feat).type(torch.float32)
         bbox_feat = torch.from_numpy(bbox_feat).type(torch.float32)
 
@@ -170,7 +171,7 @@ class VideoQADataset(Dataset):
 
         roi_feat = torch.from_numpy(roi_feat).type(torch.float32)
 
-        bbox_feat = transform_bb(roi_bbox, width, height)
+        bbox_feat = transform_bb(roi_bbox, [(width, height)])
         bbox_feat = torch.from_numpy(bbox_feat).type(torch.float32)
 
         region_feat = torch.cat((roi_feat, bbox_feat), dim=-1)
@@ -179,9 +180,19 @@ class VideoQADataset(Dataset):
 
     def get_video_feat_star(self, video_name, qid, width=320, height=240):
         clips = self.vid_clips[qid]
-        video_feature_path = f'/data/kimia/hdd2_mount/projects/data/STAR/pre_features'
+        video_root_dir = '/data/kimia/hdd2_mount/projects/data/STAR'
+        video_feature_path = f'{video_root_dir}/pre_features'
+        video_path = f'{video_root_dir}/frames'
         app_feats = []
         roi_feats, roi_bboxs = [], []
+
+        # fetch img size info
+        # fid = clips[0][0]
+        # img = Image.open(f'{video_path}/{video_name}/{fid}.png')
+        # width, height = img.size
+        # img.close()
+
+
         for cid, clip in enumerate(clips):
             clip_feat, clip_rfeat, clip_rbbox = [], [], []
             for fid in clip:
@@ -207,14 +218,16 @@ class VideoQADataset(Dataset):
         roi_feats = torch.from_numpy(roi_feats).type(torch.float32)
 
         roi_bboxs = np.asarray(roi_bboxs)
-        bbox_feats = transform_bb(roi_bboxs, width, height)
+        bbox_feats = transform_bb(roi_bboxs, width, height) # [x1,y1,x2,y2,area]
         bbox_feats = torch.from_numpy(bbox_feats).type(torch.float32)
 
         region_feats = torch.cat((roi_feats, bbox_feats), dim=-1)
 
         # print(region_feats.shape, app_feats.shape)
+        # print(bbox_feats.shape)
 
-        return region_feats, app_feats
+        # return bbox_feats without area
+        return region_feats, bbox_feats[..., :-1], app_feats, (width, height)
 
     def filter_bboxes_by_sampled_clips(self, data, vid_clips):
 
@@ -228,7 +241,7 @@ class VideoQADataset(Dataset):
 
         frame_map = []
         # each frame has 1 bbox at most
-        empty_box = torch.zeros((1, 4), dtype=torch.float32)
+        empty_box = [0,0,0,0]
         if "bboxes" in data:
             frame_bboxes = data["bboxes"]
             for idx, frame_id in enumerate(frame_ids):
@@ -236,13 +249,17 @@ class VideoQADataset(Dataset):
                     bboxes = frame_bboxes.get(frame_id)
                     if bboxes is None:
                         bboxes = empty_box
-                    else:
-                        bboxes = torch.as_tensor(bboxes, dtype=torch.float32).unsqueeze(0)
                 else:
                     bboxes = empty_box
-                frame_map.append(frame_id)
-                filtered_bboxes.append(bboxes)
+                frame_map.append(int(frame_id))
+                filtered_bboxes.append([bboxes])
+
+        filtered_bboxes = torch.tensor(filtered_bboxes)
+        frame_map = torch.tensor(frame_map)
         return filtered_bboxes, frame_map
+
+
+
     def __getitem__(self, index):
         
         cur_sample = self.data.loc[index]
@@ -258,6 +275,7 @@ class VideoQADataset(Dataset):
         else:
             qid =  str(cur_sample['qid'])
 
+        # frame_map store mapping between frames idx in the list and their corresponding real frame id
         bboxes, frame_map = self.filter_bboxes_by_sampled_clips(cur_sample, self.vid_clips[qid])
 
         if 'width' not in cur_sample:
@@ -268,9 +286,10 @@ class VideoQADataset(Dataset):
         if self.dset == 'webvid':
             video_o, video_f = self.get_video_feat(vid_id, width, height)
         elif self.dset == 'STAR':
-            video_o, video_f = self.get_video_feat_star(vid_id, qid, width, height)
+            video_o, video_b, video_f, video_size = self.get_video_feat_star(vid_id, qid, width, height)
         else:
             video_o, video_f = self.get_video_feature(vid_id, width, height)
+
 
         numc, numf, numr, d_model = video_o.shape
         vid_duration = numc
@@ -412,6 +431,7 @@ class VideoQADataset(Dataset):
         return {
             "video_id": vid_id,
             "video_o": video_o,
+            "video_b": video_b,
             "video_f": video_f,
             "video_len": vid_duration,
             "object_len": self.bbox_num,
@@ -431,7 +451,7 @@ class VideoQADataset(Dataset):
             "inter_idx": (start_t*fps, end_t*fps),
             "fps": fps,
             "bboxes": bboxes,
-            "frame_map": frame_map,
+            "frame_map": frame_map, # stored integer id instead of str for default-collate tensor conversion of elements
         }
 
 

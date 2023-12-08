@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from torch import nn
 import math
 
+from tools import box_ops
 # import util.dist as dist
 # from util import box_ops
 
@@ -49,7 +50,7 @@ class TubeDecoder(nn.Module):
         num_queries,
         video_max_len=8*4,
         guided_attn=False,
-        sted=True,
+        sted=False,
     ):
         """
         :param transformer: transformer model
@@ -115,9 +116,10 @@ class TubeDecoder(nn.Module):
             outputs_sted = self.sted_embed(hs)
 
         print("hs shape:", hs.shape)
-        hs = hs.flatten(1, 2)  # n_layersx(b*t)xnum_queriesxf
+        # hs = hs.flatten(1, 2)  # n_layersx(b*t)xnum_queriesxf
 
-        outputs_coord = self.bbox_embed(hs).sigmoid()
+        print("pred_boxes hs : ", hs[-1][0,:,0])
+        outputs_coord = self.bbox_embed(hs).sigmoid() # n_layersx(b*t)xnum_queriesx1
         out.update({"pred_boxes": outputs_coord[-1]}) # fetch last-layer output ->  (b*t)xnum_queriesx1
         if self.sted:
             out.update({"pred_sted": outputs_sted[-1]})
@@ -154,10 +156,12 @@ class SetCriterion(nn.Module):
         losses = {}
         losses["loss_bbox"] = loss_bbox.sum() / max(num_boxes, 1)
 
+        # TODO (no need for xyxy conversion if already are)
+        # TODO check if dialog is a valid way of comparing
         loss_giou = 1 - torch.diag(
             box_ops.generalized_box_iou(
-                box_ops.box_cxcywh_to_xyxy(src_boxes),
-                box_ops.box_cxcywh_to_xyxy(target_boxes),
+                src_boxes,
+                target_boxes,
             )
         )
         losses["loss_giou"] = loss_giou.sum() / max(num_boxes, 1)
@@ -344,16 +348,17 @@ def build(args):
         guided_attn=args.guided_attn,
         sted=True,
     )
-    if args.guided_attn:
-        weight_dict["loss_guided_attn"] = args.guided_attn_loss_coef
+    # if args.guided_attn:
+    #     weight_dict["loss_guided_attn"] = args.guided_attn_loss_coef
 
     losses = ["boxes", "sted"] if args.sted else ["boxes"]
     if args.guided_attn:
         losses += ["guided_attn"]
 
-    criterion = SetCriterion(
-        losses=losses,
-        sigma=args.sigma,
-    )
+    # criterion = SetCriterion(
+    #     losses=losses,
+    #     sigma=args.sigma,
+    # )
+    criterion = nn.BCELoss()
 
     return tube_detector, criterion
