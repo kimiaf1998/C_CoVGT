@@ -182,7 +182,7 @@ class VideoQADataset(Dataset):
         clips = self.vid_clips[qid]
         video_root_dir = '/data/kimia/hdd2_mount/projects/data/STAR'
         video_feature_path = f'{video_root_dir}/pre_features'
-        video_path = f'{video_root_dir}/frames'
+        video_path = f'/data/kimia/hdd3_mount/data/STAR/frames_orig_fps/frames'
         app_feats = []
         roi_feats, roi_bboxs = [], []
 

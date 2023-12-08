@@ -12,8 +12,7 @@ import torch.nn.functional as F
 from torch import nn
 import math
 
-from tools import box_ops
-# import util.dist as dist
+from tools import box_ops, dist
 # from util import box_ops
 
 from .space_time_decoder import build_transformer
@@ -63,8 +62,8 @@ class TubeDecoder(nn.Module):
         self.num_queries = num_queries
         self.transformer = transformer
         hidden_dim = transformer.d_model
-        self.bbox_embed = MLP(hidden_dim, hidden_dim, 1, 3) # bool (is the ans or not)
-        # self.query_embed = nn.Embedding(num_queries, hidden_dim)
+        self.bbox_embed = MLP(hidden_dim, hidden_dim, 4, 3) # bool (is the ans or not)
+        self.query_embed = nn.Embedding(num_queries, hidden_dim)
 
         self.video_max_len = video_max_len
         self.guided_attn = guided_attn
@@ -74,7 +73,7 @@ class TubeDecoder(nn.Module):
 
     def forward(
         self,
-        object_encoding, # (bs, t, numr, dmodel)
+        object_encoding, # (bs, t, numr, dmodel) # TODO to be removed later
         vt_encoding, # (bs, numc, dmodel)
         object_mask, # (numr, numr)
         vt_mask, # (bs, numc)
@@ -97,12 +96,21 @@ class TubeDecoder(nn.Module):
         bs, t, num_queries, _ = object_encoding.size()
         _, numc, _ = vt_encoding.size()
         numf = t//numc
-        query_encoding = object_encoding.view(num_queries, bs*t, -1) # (num_queries, bs*t, dmodel)
+        # query_encoding = object_encoding.view(num_queries, bs*t, -1) # (num_queries, bs*t, dmodel)
+
         vt_encoding = vt_encoding.flatten(0,1).unsqueeze(0).repeat(1, numf, 1) # (bs, numc, dmodel) -> (bs*numc, dmodel)
                                                                             # -> (1, bs*numc, dmodel)-> (1, bs*t, dmodel)
         vt_mask.reshape(bs * numc, -1).repeat(numf, 1) # (bs, numc) -> (bs*numc, 1) -> (bs*t,1)
+
+        query_embed = self.query_embed.weight
+
+        query_embed = query_embed.unsqueeze(1).repeat(
+            1, bs*t, 1
+        )  # n_queriesx(BT)xF
+
         hs = self.transformer(
-            query_encoding=query_encoding,  # (num_queries)x(BT)xF
+            # query_encoding=query_encoding,  # (num_queries)x(BT)xF
+            query_encoding=query_embed,  # (num_queries)x(BT)xF
             vt_encoding=vt_encoding,  # (1)x(BT)xF
             query_mask=object_mask,  # num_queriesxnum_queries)
             vt_mask=vt_mask,  # (BT)x1
@@ -150,7 +158,7 @@ class SetCriterion(nn.Module):
         """
         assert "pred_boxes" in outputs
         src_boxes = outputs["pred_boxes"]
-        target_boxes = torch.cat([t["boxes"] for t in targets], dim=0)
+        target_boxes = torch.cat([t["bboxes"] for t in targets], dim=0)
         loss_bbox = F.l1_loss(src_boxes, target_boxes, reduction="none")
 
         losses = {}
@@ -158,12 +166,10 @@ class SetCriterion(nn.Module):
 
         # TODO (no need for xyxy conversion if already are)
         # TODO check if dialog is a valid way of comparing
-        loss_giou = 1 - torch.diag(
-            box_ops.generalized_box_iou(
+        loss_giou = 1 - box_ops.generalized_box_iou(
                 src_boxes,
                 target_boxes,
             )
-        )
         losses["loss_giou"] = loss_giou.sum() / max(num_boxes, 1)
         return losses
 
@@ -282,7 +288,7 @@ class SetCriterion(nn.Module):
              time_mask: [B, T] tensor with False on the padded positions, used to take out padded frames from the loss computation
         """
         # Compute the average number of target boxes accross all nodes, for normalization purposes
-        num_boxes = sum(len(t["boxes"]) for t in targets)
+        num_boxes = sum(len(t["bboxes"]) for t in targets)
         num_boxes = torch.as_tensor(
             [num_boxes], dtype=torch.float, device=next(iter(outputs.values())).device
         )
@@ -355,10 +361,10 @@ def build(args):
     if args.guided_attn:
         losses += ["guided_attn"]
 
-    # criterion = SetCriterion(
-    #     losses=losses,
-    #     sigma=args.sigma,
-    # )
-    criterion = nn.BCELoss()
+    criterion = SetCriterion(
+        losses=losses,
+        sigma=args.sigma,
+    )
+    # criterion = nn.BCELoss()
 
     return tube_detector, criterion
