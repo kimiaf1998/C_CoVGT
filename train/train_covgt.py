@@ -106,9 +106,9 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
 
 
             # convert predicts from relative [0, 1] to absolute [0, height] coordinates
-            results = PostProcess()(tube_pred["pred_boxes"], orig_target_sizes) # TODO load orig_size
+            results = PostProcess()(tube_pred["pred_boxes"], orig_target_sizes) # TODO load orig_size (needs maximum object finding among 10)
 
-            
+
 
 
     step = "val" if not test else "test"
