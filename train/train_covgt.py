@@ -7,6 +7,7 @@ from util import compute_aggreeings, AverageMeter, get_mask, mask_tokens
 import os.path as osp
 import json
 #from fvcore.nn import FlopCountAnalysis
+from tools.postprocess import PostProcess
 
 def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
     model.eval()
@@ -20,7 +21,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
         for i, batch in enumerate(data_loader):
             if i==2:
                 break
-            answer_id, answer, video_o, video_f, question, question_id, seg_feats, seg_num = (
+            answer_id, answer, video_o, video_f, question, question_id, seg_feats, seg_num , bboxes = (
                 batch["answer_id"],
                 batch["answer"].cuda(),
                 batch["video_o"].cuda(),
@@ -28,7 +29,8 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                 batch["question"].cuda(),
                 batch['question_id'],
                 batch['seg_feats'].cuda(),
-                batch['seg_num']
+                batch['seg_num'],
+                batch['bboxes']  # visual answer locations
             )
 
             video_len = batch["video_len"]
@@ -80,7 +82,6 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                 # print('Model FLOPs:', flops.total()/1000000) #use batch_size 1
                 # break
                 ###################################
-                # TODO get tube output
                 fusion_proj, answer_proj, tube_pred = model(
                     video,
                     question,
@@ -98,9 +99,17 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                 predicts = torch.bmm(answer_proj, fusion_proj).squeeze()
 
                 predicted = torch.max(predicts, dim=1).indices.cpu()
+                # calculate textual answer accuracy
                 metrics["acc"] += (predicted == answer_id).sum().item()
                 for bs, qid in enumerate(question_id):
                     results[qid] = {'prediction': int(predicted.numpy()[bs]), 'answer':int(answer_id.numpy()[bs])}
+
+
+            # convert predicts from relative [0, 1] to absolute [0, height] coordinates
+            results = PostProcess()(tube_pred["pred_boxes"], orig_target_sizes) # TODO load orig_size
+
+            
+
 
     step = "val" if not test else "test"
 
@@ -245,9 +254,9 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         print("** Processing Tube Predictions")
         # only keep box predictions in the annotated moment
         device = tube_pred["pred_boxes"].device
-        inter_idx = batch["inter_idx"]
-        frame_mapping = batch["frame_map"]
-        keep_list = []
+        # inter_idx = batch["inter_idx"]
+        # frame_mapping = batch["frame_map"]
+        # keep_list = []
         # TODO substitute this with bbox masks (keep the ones that mask == 1)
         # for i_dur, inter in enumerate(inter_idx):
         #     start_t, end_t = inter[0], inter[1]
@@ -281,49 +290,34 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         print('All target bbox len batch 1:', len(bboxes[0]))
 
         # Extract the last elements along the last dimension
-        last_elements = bboxes[:, :, :, -4:]
+        # last_elements = bboxes[:, :, :, -4:]
 
         # Check if the last elements are [0, 0, 0, 0]
-        import numpy as np
-        condition = np.all(last_elements == empty_box, axis=-1)
+        # import numpy as np
+        # condition = np.all(last_elements == empty_box, axis=-1)
 
         # keep only targets in the annotated moments
-        bboxes = bboxes[condition]
-        print('Non-empty target bbox len batch 1:', len(bboxes[0]))
+        # bboxes = bboxes[condition]
+        # print('Non-empty target bbox len batch 1:', len(bboxes[0]))
 
         print(tube_pred["pred_boxes"][0, :, 0])
 
         # tube_pred["pred_boxes"] -> (bs*t)xnum_queriesx1
         # bboxes -> bsxtxnum_queriesx4
 
-        bs = len(video_len)
-        tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, -1, max_object_len, 1)
+        # bs = len(video_len)
+        # tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, -1, max_object_len, 1)
 
-        print(tube_pred["pred_boxes"][0, 0, :, 0])
+        # print(tube_pred["pred_boxes"][0, 0, :, 0])
 
         # get 4 positions of each predicted bbox as True
         # Use boolean indexing to select the bounding boxes
-        video_b = video_b.flatten(1,2)
-        selected_bboxes = torch.zeros(video_b.shape).to(device)  # Initialize tensor for selected bounding boxes
-        print("bbox app feat shape:", video_f.shape)
-        print("bbox region feat shape:", video_o.shape)
-        print("bbox loc shape:", video_b.shape)
+        # video_b = video_b.flatten(1,2)
+        # selected_bboxes = torch.zeros(video_b.shape).to(device)  # Initialize tensor for selected bounding boxes
+        # print("bbox app feat shape:", video_f.shape)
+        # print("bbox region feat shape:", video_o.shape)
+        # print("bbox loc shape:", video_b.shape)
 
-        bs, t, _, _ = tube_pred["pred_boxes"].size()
-        print("bs:", bs)
-        print("t:", t)
-        # BB_THRESH = 0.5
-        # for i in range(bs):
-        #     for j in range(t):
-        #         # Get indices of True values in bboxes_pred for each batch and time step
-        #         print(tube_pred["pred_boxes"][i, j, :, 0])
-        #         true_indices = torch.where(tube_pred["pred_boxes"][i, j, :, 0] > BB_THRESH)[0]
-        #         print("true indices:", true_indices)
-        #         if true_indices.numel() > 0:
-        #             # Assign the corresponding bboxes to selected_bboxes
-        #
-        #             selected_bboxes[i, j, true_indices] = video_b[i, j, true_indices]
-        #
         # # TODO maybe adding mask for False objects of check if an empty bbox in loss calculation
         # print("selected_bbox [0][5]", selected_bboxes[0][5])
         # tube_pred["pred_boxes"] = selected_bboxes.clone()
@@ -352,7 +346,7 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
                 time_mask = None
 
             if loc_criterion is not None:
-                loss_dict.update(loc_criterion(outputs, targets, inter_idx, time_mask))
+                loss_dict.update(loc_criterion(tube_pred["pred_boxes"], targets))
 
         loss_dict.update({"loss_vqa": vqa_loss})
 
