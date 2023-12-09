@@ -1,3 +1,6 @@
+from torch import nn
+import torch
+
 class PostProcess(nn.Module):
     """This module converts the model's output into the format expected by the coco api"""
 
@@ -12,7 +15,7 @@ class PostProcess(nn.Module):
         """
         out_bbox = outputs["pred_boxes"]
         # and from relative [0, 1] to absolute [0, height] coordinates
-        img_h, img_w = target_sizes
+        img_h, img_w = target_sizes.unbind(1)
         scale_fct = torch.stack([img_w, img_h, img_w, img_h], dim=1)
         boxes = out_bbox * scale_fct
 

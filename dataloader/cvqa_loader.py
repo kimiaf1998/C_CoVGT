@@ -182,7 +182,7 @@ class VideoQADataset(Dataset):
 
     def get_video_feat_star(self, video_name, qid, width=320, height=240):
         clips = self.vid_clips[qid]
-        video_root_dir = '/data/kimia/hdd2_mount/projects/data/STAR'
+        video_root_dir = '/data/kimia/hdd2_mount/kimia_data/projects/data/STAR'
         video_feature_path = f'{video_root_dir}/pre_features'
         app_feats = []
         roi_feats, roi_bboxs = [], []
@@ -431,6 +431,7 @@ class VideoQADataset(Dataset):
             "video_b": video_b,  # numcxnumfxnum_obj
             "video_f": video_f,
             "video_len": vid_duration,
+            "orig_size": (width, height),
             "object_len": self.bbox_num,
             "question": question_embd,
             "question_txt": question_txt,

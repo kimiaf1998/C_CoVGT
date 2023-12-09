@@ -72,7 +72,7 @@ def generate_json(data: list or dict, output_path: str):
 
 if __name__ == '__main__':
     dataset = 'STAR'
-    video_dir = f'/data/kimia/hdd2_mount/projects/data/STAR/pre_features/frame_feat'  # extracted video frames, refer to extract_video.py
+    video_dir = f'/data/kimia/hdd2_mount/kimia_data/projects/data/STAR/pre_features/frame_feat'  # extracted video frames, refer to extract_video.py
     # modes = ['train', 'val', 'test']
     modes = ['train', 'val']
     for mode in modes:
