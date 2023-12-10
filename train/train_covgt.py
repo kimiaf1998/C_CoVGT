@@ -22,7 +22,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
         for i, batch in enumerate(data_loader):
             if i==2:
                 break
-            answer_id, answer, video_o, video_f, vid_orig_size, question, question_id, seg_feats, seg_num , bboxes = (
+            answer_id, answer, video_o, video_f, vid_orig_size, question, question_id, seg_feats, seg_num , bboxes, bboxes_mask = (
                 batch["answer_id"],
                 batch["answer"].cuda(),
                 batch["video_o"].cuda(),
@@ -32,7 +32,8 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                 batch['question_id'],
                 batch['seg_feats'].cuda(),
                 batch['seg_num'],
-                batch['bboxes']  # visual answer locations
+                batch['bboxes'],  # visual answer locations (gt)
+                batch['bboxes_mask']  # mask of visual answer locations (gt)
             )
 
             video_len = batch["video_len"]
@@ -109,7 +110,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
 
             # convert predicts from relative [0, 1] to absolute [0, height] coordinates
             # results = PostProcess()(tube_pred["pred_boxes"], vid_orig_size) # TODO load orig_size (needs maximum object finding among 10)
-            evaluator = STAREvaluator(targets=bboxes, frame_mapping=batch["frame_mapping"])
+            evaluator = STAREvaluator(targets=batch)
             evaluator.update(tube_pred["pred_boxes"])
             evaluator.summarize()
 
@@ -193,10 +194,8 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         assert len(bboxes) == len(video_b)
         video_b = video_b.flatten(1, 2)
         print("max bbox x,y:", bboxes.max())
+        print("max bbox x,y:", GT.max())
         print("GT box shape:", bboxes.shape)
-        print("GT boxes:", bboxes)
-        print("orig size:", batch["orig_size"][0])
-        print("Feat boxes:", video_b)
         continue
 
         # for every boxes in every frames

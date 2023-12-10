@@ -13,18 +13,20 @@ class STARiouEvaluator:
     def __init__(
         self,
         targets: list,
-        frame_mapping: dict,
         iou_thresholds: list = [0.3, 0.5],
     ):
         """
         :param targets: batch of videos
-        :param frame_mapping: frame idx to real frame number
         :param iou_thresholds: IoU thresholds for the vIoU metrics
         """
 
         self.iou_thresholds = iou_thresholds
         self.targets = targets
-        self.frame_mapping = frame_mapping
+
+        self.video_ids = target["video_id"]
+        self.question_ids = target["question_id"]
+        self.gt_bboxes = target["bboxes"]
+        self.frame_mapping = target["frame_mapping"]
 
     def evaluate(self, predictions: List[Dict]): # predictions => BxTxnum_quesriesx4
         if len(predictions) < len(self.targets):
@@ -32,12 +34,12 @@ class STARiouEvaluator:
                 f"{len(self.img2box) - len(predictions)} box predictions missing"
             )
         vid_metrics = {}
-        for preds, target in zip(predictions, self.targets):
+        for idx, pred in enumerate(predictions):
+            pred_bboxes = pred["bboxes"]
 
-            video_id = target["video_id"]
-            question_id = target["question_id"]
-            gt_bboxes = target["bboxes"]
-            pred_bboxes = preds["bboxes"]
+            gt_bboxes = self.gt_bboxes[idx]
+            video_id = self.video_ids[idx]
+            question_id = self.question_ids[idx]
 
             vid_metrics[question_id] = {
             }
@@ -71,19 +73,16 @@ class STAREvaluator(object):
     def __init__(
         self,
         targets: list,
-        frame_mapping: dict,
         iou_thresholds=[0.3, 0.5],
         save_pred=False,
     ):
         """
         :param targets: batch of videos
-        :param frame_mapping: frame idx to real frame number
         :param iou_thresholds: IoU thresholds for the vIoU metrics
         :param save_pred: whether to save predictions in the output of summarize
         """
         self.evaluator = STARiouEvaluator(
             targets,
-            frame_mapping,
             iou_thresholds=iou_thresholds,
         )
         self.predictions = {}
