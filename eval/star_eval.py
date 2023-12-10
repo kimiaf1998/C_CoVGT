@@ -2,8 +2,7 @@ from pathlib import Path
 from typing import Dict, List
 
 import numpy as np
-
-import util.dist as dist
+import tools.dist as dist
 
 import json
 from functools import reduce

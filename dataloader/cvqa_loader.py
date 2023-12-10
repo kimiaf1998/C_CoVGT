@@ -279,6 +279,7 @@ class VideoQADataset(Dataset):
             fid = f"{int(fid)+1:06}"
             img = Image.open(f'{video_path}/{vid_id}/{fid}.png')
             width, height = img.size
+            video_orig_size = torch.as_tensor([width, height])
             img.close()
         else:
             width, height = cur_sample['width'], cur_sample['height']
@@ -290,10 +291,9 @@ class VideoQADataset(Dataset):
             video_o, video_f = self.get_video_feature(vid_id, width, height)
 
         # frame_map store mapping between frames idx in the list and their corresponding real frame id
-        bboxes, frame_map = self.filter_bboxes_by_sampled_clips(cur_sample, self.vid_clips[qid])
+        bboxes, frame_map = self.filter_bboxes_by_sampled_clips(cur_sample, self.vid_clips[qid]) # bboxes = (bs, numc*numf, 4)
         # normalize bboxes
-        bboxes = transform_bb(bboxes, width, height)
-
+        # bboxes = transform_bb(bboxes, width, height)[..., :-1]
         numc, numf, numr, d_model = video_o.shape
         vid_duration = numc
 
@@ -432,7 +432,7 @@ class VideoQADataset(Dataset):
             "video_b": video_b,  # numcxnumfxnum_obj
             "video_f": video_f,
             "video_len": vid_duration,
-            "orig_size": (width, height),
+            "orig_size": video_orig_size,
             "object_len": self.bbox_num,
             "question": question_embd,
             "question_txt": question_txt,

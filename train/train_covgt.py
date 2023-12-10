@@ -193,7 +193,9 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         assert len(bboxes) == len(video_b)
         video_b = video_b.flatten(1, 2)
         print("max bbox x,y:", bboxes.max())
+        print("GT box shape:", bboxes.shape)
         print("GT boxes:", bboxes[0,0])
+        print("orig size:", batch["orig_size"][0])
         print("Feat boxes:", video_b[0,0])
         continue
 
