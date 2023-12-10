@@ -230,8 +230,8 @@ class VideoQADataset(Dataset):
 
         # Iterate through the annotations and filter based on frame IDs
         filtered_bboxes = []
-        # TODO define bbox masks not to include in loss calculation
-        mask_bboxes = []
+        # bboxes_mask is True when bbox exists in the frame otherwise, False.
+        bboxes_mask = torch.zeros((len(frame_ids)), dtype=torch.bool)
 
         frame_map = []
         # each frame has 1 bbox at most
@@ -243,14 +243,17 @@ class VideoQADataset(Dataset):
                     bboxes = frame_bboxes.get(frame_id)
                     if bboxes is None:
                         bboxes = empty_box
+                    else:
+                        bboxes_mask[idx] = True
                 else:
                     bboxes = empty_box
+
                 frame_map.append(int(frame_id))
                 filtered_bboxes.append([bboxes])
 
         filtered_bboxes = torch.tensor(filtered_bboxes)
         frame_map = torch.tensor(frame_map)
-        return filtered_bboxes, frame_map
+        return filtered_bboxes, bboxes_mask, frame_map
 
     def __getitem__(self, index):
 
@@ -291,9 +294,9 @@ class VideoQADataset(Dataset):
             video_o, video_f = self.get_video_feature(vid_id, width, height)
 
         # frame_map store mapping between frames idx in the list and their corresponding real frame id
-        bboxes, frame_map = self.filter_bboxes_by_sampled_clips(cur_sample, self.vid_clips[qid]) # bboxes = (bs, numc*numf, 4)
+        bboxes, bboxes_mask, frame_map = self.filter_bboxes_by_sampled_clips(cur_sample, self.vid_clips[qid]) # bboxes = (bs, numc*numf, 4)
         # normalize bboxes
-        # bboxes = transform_bb(bboxes, width, height)[..., :-1]
+        bboxes = transform_bb(bboxes, width, height)[..., :-1]
         numc, numf, numr, d_model = video_o.shape
         vid_duration = numc
 
@@ -450,6 +453,7 @@ class VideoQADataset(Dataset):
             "inter_idx": (start_t * fps, end_t * fps),
             "fps": fps,
             "bboxes": bboxes,  # (numc*numf)x1
+            "bboxes_mask": bboxes_mask,  # (numc*numf)x1
             "frame_mapping": frame_map,
             # stored integer id instead of str for default-collate tensor conversion of elements
         }

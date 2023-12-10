@@ -194,9 +194,9 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         video_b = video_b.flatten(1, 2)
         print("max bbox x,y:", bboxes.max())
         print("GT box shape:", bboxes.shape)
-        print("GT boxes:", bboxes[0,0])
+        print("GT boxes:", bboxes)
         print("orig size:", batch["orig_size"][0])
-        print("Feat boxes:", video_b[0,0])
+        print("Feat boxes:", video_b)
         continue
 
         # for every boxes in every frames
