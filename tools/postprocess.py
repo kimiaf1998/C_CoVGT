@@ -14,7 +14,7 @@ class PostProcess(nn.Module):
                           For visualization, this should be the image size after data augment, but before padding
         """
         out_bbox = outputs["pred_boxes"]
-        # and from relative [0, 1] to absolute [0, height] coordinates
+        # and from relative [0, 1] to absolute [0, height] coordinate
         img_h, img_w = target_sizes.unbind(1)
         scale_fct = torch.stack([img_w, img_h, img_w, img_h], dim=1)
         boxes = out_bbox * scale_fct

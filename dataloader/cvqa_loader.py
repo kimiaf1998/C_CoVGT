@@ -254,7 +254,7 @@ class VideoQADataset(Dataset):
 
     def __getitem__(self, index):
 
-        cur_sample = self.data.loc[index + 119]  # TODO just for testing (must be removed)
+        cur_sample = self.data.loc[index]
         start_t = cur_sample['start']
         end_t = cur_sample['end']
         # a dict containing mapping of frame id to frame idx (32 sampled)
@@ -275,9 +275,10 @@ class VideoQADataset(Dataset):
 
             # fetch img size info
             fid = self.vid_clips[qid][0][0]
+            # features indices starts from 0 while frames 1
+            fid = f"{int(fid)+1:06}"
             img = Image.open(f'{video_path}/{vid_id}/{fid}.png')
             width, height = img.size
-            print(f"width = {width}, height = {height}")
             img.close()
         else:
             width, height = cur_sample['width'], cur_sample['height']
@@ -449,7 +450,7 @@ class VideoQADataset(Dataset):
             "inter_idx": (start_t * fps, end_t * fps),
             "fps": fps,
             "bboxes": bboxes,  # (numc*numf)x1
-            "frame_map": frame_map,
+            "frame_mapping": frame_map,
             # stored integer id instead of str for default-collate tensor conversion of elements
         }
 

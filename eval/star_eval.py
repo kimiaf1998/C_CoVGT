@@ -46,7 +46,9 @@ class STARiouEvaluator:
             viou = 0
 
             for pred_bb, gt_bb in zip(pred_bboxes, gt_bboxes):  # iterate on all frames of the annotated moment to update GT metrics
-                iou = np_box_iou(np.array(pred_bb), np.array(gt_bb))[0][0]
+                iou_matrix = np_box_iou(np.array(gt_bb), np.array(pred_bb))
+                max_preds, _ = torch.max(iou_matrix, dim=1)
+                iou = torch.mean(max_preds)
                 viou += iou
 
             # compute viou@R

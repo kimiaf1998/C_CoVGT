@@ -8,6 +8,7 @@ import os.path as osp
 import json
 #from fvcore.nn import FlopCountAnalysis
 from tools.postprocess import PostProcess
+from eval.star_eval import STAREvaluator
 
 def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
     model.eval()
@@ -21,11 +22,12 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
         for i, batch in enumerate(data_loader):
             if i==2:
                 break
-            answer_id, answer, video_o, video_f, question, question_id, seg_feats, seg_num , bboxes = (
+            answer_id, answer, video_o, video_f, vid_orig_size, question, question_id, seg_feats, seg_num , bboxes = (
                 batch["answer_id"],
                 batch["answer"].cuda(),
                 batch["video_o"].cuda(),
                 batch["video_f"].cuda(),
+                batch["orig_size"],
                 batch["question"].cuda(),
                 batch['question_id'],
                 batch['seg_feats'].cuda(),
@@ -106,7 +108,10 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
 
 
             # convert predicts from relative [0, 1] to absolute [0, height] coordinates
-            results = PostProcess()(tube_pred["pred_boxes"], orig_target_sizes) # TODO load orig_size (needs maximum object finding among 10)
+            # results = PostProcess()(tube_pred["pred_boxes"], vid_orig_size) # TODO load orig_size (needs maximum object finding among 10)
+            evaluator = STAREvaluator(targets=bboxes, frame_mapping=batch["frame_mapping"])
+            evaluator.update(tube_pred["pred_boxes"])
+            evaluator.summarize()
 
 
 
