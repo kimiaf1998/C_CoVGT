@@ -114,6 +114,7 @@ class STAREvaluator(object):
         print("categories:", categories)
         metrics = {}
         counter = {}
+        m_viou = 0 # average viou over all qids
         for category in categories:  # init metrics
             metrics.update({category: {"viou": 0}})
             for thresh in self.iou_thresholds:
@@ -123,9 +124,12 @@ class STAREvaluator(object):
             print("metrics:", metrics)
             question_cat = '_'.join(question_id.split("_")[1:3])
             metrics[question_cat]["viou"] += x["viou"]
+            m_viou += x["viou"]
+
             for thresh in self.iou_thresholds:
                 metrics[question_cat][f"viou@{thresh}"] += x[f"viou@{thresh}"]
             counter[question_cat] += 1
+        m_viou /= len(self.results)
         for category in categories:  # average results per category
             for key in metrics[category]: # used to be qid
                 metrics[category][key] = metrics[category][key] / counter[category]
@@ -135,6 +139,7 @@ class STAREvaluator(object):
             for question_id in metrics
             for name in metrics[question_id]
         }
+        out.update({"m_viou": m_viou})
         if self.save_pred:
             out["predictions"] = self.predictions
             out["vid_metrics"] = self.results

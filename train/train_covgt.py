@@ -110,6 +110,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                 metrics["acc"] += (predicted == answer_id).mean().item()
                 for bs, qid in enumerate(question_id):
                     results[qid] = {'prediction': int(predicted.numpy()[bs]), 'answer':int(answer_id.numpy()[bs])}
+                    # TODO map answer choice to answer value
 
 
             # convert predicts from relative [0, 1] to absolute [0, height] coordinates
@@ -122,6 +123,9 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
             evaluator.update(tube_pred["pred_boxes"])
             loc_output = evaluator.summarize()
 
+
+    print("qa preds:", results)
+    print("loc preds:", loc_output["predictions"])
     # merge qa + localization results
     output = {"qa": {"predictions": results, "acc": metrics["acc"]}, "loc": loc_output}
 

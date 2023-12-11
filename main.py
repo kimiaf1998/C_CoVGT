@@ -131,14 +131,16 @@ def main(args):
         #     val_acc, results = eval(model, val_loader, a2v, args, test=False, tokenizer=tokenizer)  # zero-shot VideoQA
         #     save_path = osp.join(args.save_dir, 'val-res0.json')
         #     save_to (save_path, results)
-        val_acc = 42.0
-        best_val_acc = 0 if args.pretrain_path == "" else val_acc
+        # val_acc = 42.0
+        # best_val_acc = 0 if args.pretrain_path == "" else val_acc
+        best_val_viou = 0
         best_epoch = 0
         for epoch in range(args.epochs):
             train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weight_dict, scheduler, epoch, args, tokenizer)
-            val_acc, results = eval(model, val_loader, a2v, args, test=False, tokenizer=tokenizer)
-            if val_acc > best_val_acc:
-                best_val_acc = val_acc
+            outputs = eval(model, val_loader, a2v, args, test=False, tokenizer=tokenizer)
+            val_iou = outputs["loc"]["m_viou"]
+            if val_iou > best_val_viou:
+                best_val_viou = val_acc
                 best_epoch = epoch
                 torch.save(
                     model.state_dict(), os.path.join(args.save_dir, "best_model.pth")
@@ -150,9 +152,10 @@ def main(args):
                 ep_file = os.path.join(args.save_dir, f"e{epoch}.pth")
                 torch.save(model.state_dict(), ep_file)
                 logging.info('Save to '+ep_file)
-        logging.info(f"Best val model at epoch {best_epoch + 1} with acc {best_val_acc:.2f}")
-    else:   
-    # Evaluate on test set
+        logging.info(f"Best val model at epoch {best_epoch + 1} with m_viou {best_val_viou:.2f}")
+        # logging.info(f"Best val model at epoch {best_epoch + 1} with acc {best_val_acc:.2f}")
+    else:
+        # Evaluate on test set
         test_acc, results = eval(model, test_loader, a2v, args, test=True, tokenizer=tokenizer)
         save_path = osp.join(args.save_dir, 'test-res.json')
         save_to(save_path, results)
