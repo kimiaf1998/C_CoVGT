@@ -150,7 +150,7 @@ def get_args():
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument(
-        "--test", type=int, default=0, help="use to evaluate without training"
+        "--test", action="store_true", help="use to evaluate without training"
     )
     parser.add_argument(
         "--lr", type=float, default=5e-5, help="initial learning rate"

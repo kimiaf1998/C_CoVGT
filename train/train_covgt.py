@@ -13,7 +13,7 @@ from eval.star_eval import STAREvaluator
 def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
     model.eval()
     count = 0
-    metrics, counts = collections.defaultdict(int), collections.defaultdict(int)
+    metrics, counts = collections.defaultdict(float), collections.defaultdict(int)
     print("** Evaluating **")
 
     with torch.no_grad():
@@ -70,6 +70,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                 else:
                     answer_id = (answer_id / 2).clamp(max=1)
                     answer_id_expanded = answer_id
+                # TODO divide the metrics res by count
                 metrics = compute_aggreeings(
                     topk,
                     answer_id_expanded,
@@ -106,7 +107,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
 
                 predicted = torch.max(predicts, dim=1).indices.cpu()
                 # calculate textual answer accuracy
-                metrics["acc"] += (predicted == answer_id).sum().item()
+                metrics["acc"] += (predicted == answer_id).mean().item()
                 for bs, qid in enumerate(question_id):
                     results[qid] = {'prediction': int(predicted.numpy()[bs]), 'answer':int(answer_id.numpy()[bs])}
 
@@ -114,24 +115,26 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
             # convert predicts from relative [0, 1] to absolute [0, height] coordinates
             # results = PostProcess()(tube_pred["pred_boxes"], vid_orig_size) # TODO load orig_size (needs maximum object finding among 10)
             # tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc*numf), max_object_num, -1)
-            evaluator = STAREvaluator(targets=batch)
+            evaluator = STAREvaluator(targets=batch, save_pred=args.test)
             bs, numc, numf, _, _ = video_o.size()
             tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc * numf), max_object_len,
                                                                       -1)  # (bs*t)xnum_queriesx1 -> bsxtxnum_queriesx4
             evaluator.update(tube_pred["pred_boxes"])
-            evaluator.summarize()
+            localization_res = evaluator.summarize()
 
 
 
 
     step = "val" if not test else "test"
-
+    # TODO add bbox metrics as well
     for k in metrics:
-        # print(metrics[k], count)
-        v = metrics[k] / count
+        # v = metrics[k] / count
+        v = metrics[k]
+        print(f"{step} {k}: {v:.2%}")
         logging.info(f"{step} {k}: {v:.2%}")
-        break
+        # break
 
+    # TODO fix metrics[acc] only
     return metrics["acc"] / count, results
 
 
