@@ -40,7 +40,6 @@ class STARiouEvaluator:
 
         for idx, pred_bboxes in enumerate(predictions): # iterate on video batches
             pred_bboxes= box_cxcywh_to_xyxy(pred_bboxes)
-            print("pred_bboxes.device:", pred_bboxes.device)
             gt_bboxes = self.gt_bboxes[idx]
             gt_bboxes = gt_bboxes.to(pred_bboxes.device)
             gt_bboxes_mask = self.gt_bboxes_mask[idx]
@@ -61,7 +60,8 @@ class STARiouEvaluator:
 
             total_annotated_frames = torch.sum(gt_bboxes_mask).item()
             # compute viou@R
-            viou = viou / total_annotated_frames
+            if total_annotated_frames > 0:
+                viou = viou / total_annotated_frames
             vid_metrics[question_id].update({"viou" : viou})
             recalls = {thresh: 0 for thresh in self.iou_thresholds}
             for thresh in self.iou_thresholds:
@@ -107,18 +107,17 @@ class STAREvaluator(object):
         self.results = self.evaluator.evaluate(
             self.predictions
         )
-        categories = set(x["question_id"].split("_")[:-1] for x in self.results.keys())
+        categories = [x.split("_")[1:-2]+x.split("_")[-2:-1] for x in self.results.keys()]
         print("categories:", categories)
         metrics = {}
         counter = {}
         for category in categories:  # init metrics
-            if self.tmp_loc:
-                metrics[category].update({"viou": 0})
+            metrics[category].update({"viou": 0})
             for thresh in self.iou_thresholds:
-                metrics[category][f"viou@{thresh}"] = 0
+                metrics[category].update({f"viou@{thresh}" : 0})
             counter[category] = 0
         for x in self.results.values():  # sum results
-            question_id = x["question_id"].split("_")[:-1]
+            question_id = x.split("_")[1:-2]+x.split("_")[-2:-1]
             metrics[question_id]["viou"] += x["viou"]
             for thresh in self.iou_thresholds:
                 metrics[question_id][f"viou@{thresh}"] += x[f"viou@{thresh}"]
