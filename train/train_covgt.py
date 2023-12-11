@@ -19,7 +19,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
     with torch.no_grad():
         if not args.mc:
             model.module._compute_answer_embedding(a2v)
-        results = {}
+        qa_predictions = {}
         for i, batch in enumerate(data_loader):
             if i==2:
                 break
@@ -80,7 +80,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                     ivqa=(args.dataset == "ivqa"),
                 )
                 for bs, qid in enumerate(question_id):
-                    results[qid] = {'prediction': int(topk.numpy()[bs,0]), 'answer':int(answer_id.numpy()[bs])}
+                    qa_predictions[qid] = {'prediction': int(topk.numpy()[bs,0]), 'answer':int(answer_id.numpy()[bs])}
             else:
                 #############Model FLOPs##########
                 # inputs = (video, question, None, answer.cuda(), seq_len, video_mask, answer_mask)
@@ -107,16 +107,16 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
 
                 predicted = torch.max(predicts, dim=1).indices.cpu()
                 # calculate textual answer accuracy
-                metrics["acc"] += (predicted == answer_id).mean().item()
+                metrics["acc"] += (predicted == answer_id).sum().item()
                 for bs, qid in enumerate(question_id):
-                    results[qid] = {'prediction': int(predicted.numpy()[bs]), 'answer':int(answer_id.numpy()[bs])}
+                    qa_predictions[qid] = {'prediction': int(predicted.numpy()[bs]), 'answer':int(answer_id.numpy()[bs])}
                     # TODO map answer choice to answer value
 
 
             # convert predicts from relative [0, 1] to absolute [0, height] coordinates
             # results = PostProcess()(tube_pred["pred_boxes"], vid_orig_size) # TODO load orig_size (needs maximum object finding among 10)
             # tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc*numf), max_object_num, -1)
-            evaluator = STAREvaluator(targets=batch, save_pred=args.test)
+            evaluator = STAREvaluator(targets=batch, save_pred=True)
             bs, numc, numf, _, _ = video_o.size()
             tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc * numf), max_object_len,
                                                                       -1)  # (bs*t)xnum_queriesx1 -> bsxtxnum_queriesx4
@@ -124,11 +124,24 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
             loc_output = evaluator.summarize()
 
 
-    print("qa preds:", results)
+    print("qa preds:", qa_predictions)
     print("loc preds:", loc_output["predictions"])
-    # merge qa + localization results
-    output = {"qa": {"predictions": results, "acc": metrics["acc"]}, "loc": loc_output}
+    loc_predictions = loc_output["predictions"]
+    loc_output.pop("predictions")
 
+    # merge qa + localization results
+    output = { "results":{
+        question_id: {
+            "prediction": {"desc": qa_predictions[question_id]['prediction'], "box": loc_predictions[question_id]['prediction']['box']},
+            "answer": {"desc": qa_predictions[question_id]['answer'], "box": loc_predictions[question_id]['answer']}
+        }
+        for question_id in predictions_dict.keys()
+        },
+        "metrics": {
+            "acc": metrics["acc"] / count,
+            "viou": loc_output
+            }
+        }
 
     step = "val" if not test else "test"
     # TODO add bbox metrics as well

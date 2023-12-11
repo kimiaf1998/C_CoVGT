@@ -37,6 +37,7 @@ class STARiouEvaluator:
                 f"{len(self.targets) - len(predictions)} box predictions missing"
             )
         vid_metrics = {}
+        mapped_predictions = {}
 
         for idx, pred_bboxes in enumerate(predictions): # iterate on video batches
             pred_bboxes= box_cxcywh_to_xyxy(pred_bboxes)
@@ -48,6 +49,9 @@ class STARiouEvaluator:
 
             total_annotated_frames = torch.sum(gt_bboxes_mask).item()
 
+            # for every frame we expect at most one bbox
+            mapped_pred_bboxes = torch.zeros((pred_bboxes.size(0), 4))
+
             # no bbox annotated for this video
             if total_annotated_frames <= 0:
                 print("no bbox annotated for video:", video_id)
@@ -56,12 +60,18 @@ class STARiouEvaluator:
             viou = 0
             vid_metrics[question_id] = {}
 
+            frame_no = 0
             for pred_bb, gt_bb, gt_bb_mask in zip(pred_bboxes, gt_bboxes, gt_bboxes_mask):  # iterate on all frames of the annotated moment to update GT metrics
                 if gt_bb_mask: # if frame annotated
                     iou_matrix, _ = box_iou(gt_bb, pred_bb)
                     max_preds, _ = torch.max(iou_matrix, dim=1)
+                    max_preds_idx = torch.argmax(iou_matrix, dim=1)
                     iou = torch.mean(max_preds).item()
                     viou += iou
+                    mapped_pred_bboxes[frame_no] = pred_bb[max_preds_idx]
+                frame_no += 1
+
+            mapped_predictions.update({question_id: {"prediction": mapped_pred_bboxes, "answer": gt_bboxes.squeeze()}})
 
             # compute viou@R
             viou = viou / total_annotated_frames
@@ -77,7 +87,7 @@ class STARiouEvaluator:
                 }
             )
 
-        return vid_metrics
+        return vid_metrics, mapped_predictions
 
 
 class STAREvaluator(object):
@@ -106,7 +116,7 @@ class STAREvaluator(object):
         self.predictions = predictions
 
     def summarize(self):
-        self.results = self.evaluator.evaluate(
+        self.results, mapped_predictions = self.evaluator.evaluate(
             self.predictions
         )
         categories = set('_'.join(x.split("_")[1:3]) for x in self.results.keys())
@@ -121,7 +131,6 @@ class STAREvaluator(object):
                 metrics[category].update({f"viou@{thresh}" : 0})
             counter.update({category : 0})
         for question_id, x in self.results.items():  # sum results
-            print("metrics:", metrics)
             question_cat = '_'.join(question_id.split("_")[1:3])
             metrics[question_cat]["viou"] += x["viou"]
             m_viou += x["viou"]
@@ -141,6 +150,6 @@ class STAREvaluator(object):
         }
         out.update({"m_viou": m_viou})
         if self.save_pred:
-            out["predictions"] = self.predictions
-            out["vid_metrics"] = self.results
+            out["predictions"] = mapped_predictions
+            # out["vid_metrics"] = self.results
         return out
