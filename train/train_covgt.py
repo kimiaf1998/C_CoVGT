@@ -123,30 +123,28 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
             evaluator.update(tube_pred["pred_boxes"])
             loc_output = evaluator.summarize()
 
-
-    print("qa preds:", qa_predictions)
-    print("loc preds:", loc_output["predictions"])
     loc_predictions = loc_output["predictions"]
     loc_output.pop("predictions")
 
     # merge qa + localization results
     output = { "results":{
         question_id: {
-            "prediction": {"desc": qa_predictions[question_id]['prediction'], "box": loc_predictions[question_id]['prediction']['box']},
+            "prediction": {"desc": qa_predictions[question_id]['prediction'], "box": loc_predictions[question_id]['prediction']},
             "answer": {"desc": qa_predictions[question_id]['answer'], "box": loc_predictions[question_id]['answer']}
         }
-        for question_id in predictions_dict.keys()
+        for question_id in loc_predictions.keys() # just going with annotated samples (having bbox)
         },
         "metrics": {
             "acc": metrics["acc"] / count,
-            }.update(loc_output)
+            }
         }
+    # Update the "metrics" dictionary with loc metrics
+    output["metrics"].update(loc_output)
 
     step = "val" if not test else "test"
     # TODO add bbox metrics as well
     for k in metrics:
-        # v = metrics[k] / count
-        v = metrics[k]
+        v = metrics[k] / count
         print(f"{step} {k}: {v:.2%}")
         logging.info(f"{step} {k}: {v:.2%}")
         # break

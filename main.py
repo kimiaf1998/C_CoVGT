@@ -139,16 +139,18 @@ def main(args):
             train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weight_dict, scheduler, epoch, args, tokenizer)
             outputs = eval(model, val_loader, a2v, args, test=False, tokenizer=tokenizer)
             val_iou = outputs["metrics"]["m_viou"]
+            results = outputs["results"]
             if val_iou > best_val_viou:
                 best_val_viou = val_iou
                 best_epoch = epoch
                 torch.save(
                     model.state_dict(), os.path.join(args.save_dir, "best_model.pth")
                 )
+
+
                 logging.info(f"Best model have been saved in {os.path.join(args.save_dir, 'best_model.pth')}")
                 save_path = osp.join(args.save_dir, 'val-res.json')
-                # TODO uncomment
-                # save_to(save_path, results)
+                save_to(save_path, results)
             if args.dataset == 'webvid': 
                 ep_file = os.path.join(args.save_dir, f"e{epoch}.pth")
                 torch.save(model.state_dict(), ep_file)
@@ -158,8 +160,8 @@ def main(args):
     else:
         # Evaluate on test set
         outputs = eval(model, test_loader, a2v, args, test=True, tokenizer=tokenizer)
+        results = outputs["results"]
         save_path = osp.join(args.save_dir, 'test-res.json')
-        # TODO fixed
         save_to(save_path, results)
 
 

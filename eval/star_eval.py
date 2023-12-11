@@ -120,7 +120,6 @@ class STAREvaluator(object):
             self.predictions
         )
         categories = set('_'.join(x.split("_")[1:3]) for x in self.results.keys())
-        print("self.results:", self.results)
         print("categories:", categories)
         metrics = {}
         counter = {}
