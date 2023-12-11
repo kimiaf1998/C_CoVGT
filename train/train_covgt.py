@@ -127,38 +127,6 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
 
     return metrics["acc"] / count, results
 
-def bbox_iou(box1, box2):
-
-    """
-    Calculate the Intersection over Union (IoU) of two bounding boxes.
-
-    Parameters:
-    box1 : tensor of bounding boxes, shape (N, 4)
-    box2 : tensor of bounding boxes, shape (M, 4)
-
-    Returns:
-    iou : tensor of IoU values, shape (N, M)
-    """
-    # Calculate the coordinates of the intersection rectangles
-    x_left = torch.max(box1[:, None, 0], box2[:, 0])
-    y_top = torch.max(box1[:, None, 1], box2[:, 1])
-    x_right = torch.min(box1[:, None, 2], box2[:, 2])
-    y_bottom = torch.min(box1[:, None, 3], box2[:, 3])
-
-    # Calculate intersection area
-    intersection_area = (x_right - x_left).clamp(min=0) * (y_bottom - y_top).clamp(min=0)
-
-    # Calculate the area of both bounding boxes
-    box1_area = (box1[:, 2] - box1[:, 0]) * (box1[:, 3] - box1[:, 1])
-    box2_area = (box2[:, 2] - box2[:, 0]) * (box2[:, 3] - box2[:, 1])
-
-    # Calculate union area
-    union_area = box1_area[:, None] + box2_area - intersection_area
-
-    # Calculate IoU
-    iou = intersection_area / union_area
-
-    return iou
 
 def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weight_dict, scheduler, epoch, args, tokenizer):
     model.train()
@@ -189,39 +157,14 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
             batch['bboxes']        # visual answer locations
         )
 
-        device = video_b.device
-
-        assert len(bboxes) == len(video_b)
-        video_b = video_b.flatten(1, 2)
-        print("max bbox x,y:", bboxes.max())
-        print("max bbox x,y:", GT.max())
-        print("GT box shape:", bboxes.shape)
-        continue
-
-        # for every boxes in every frames
-        from torchvision.ops import complete_box_iou, box_iou
-        for vid_boxes, vid_gt in zip(video_b.flatten(1,2)[:3], bboxes.to(device)[:3]):
-            for f_bboxes, f_gt in zip(vid_boxes, vid_gt):
-                print("feature bboxes:", f_bboxes.shape)
-                print("gt bboxes:", f_gt.shape)
-                # iou = complete_box_iou(f_gt, f_bboxes)
-                iou = box_iou(f_gt, f_bboxes)
-                print("IoU Res", iou)
-        continue
-
-
         video_len = batch["video_len"]
         max_object_len = max(batch["object_len"])
 
         question_mask = (question != tokenizer.pad_token_id).float().cuda() #RobBERETa
         answer_mask = (answer!=tokenizer.pad_token_id).float().cuda() #RobBERETa
-        video_mask = (
-            get_mask(video_len, video_o.size(1)).cuda() if args.video_max_len > 0 else None
-        )
         print("video_o shape:", video_o.size())
         video_mask = get_mask(video_len, video_o.size(1)).cuda()
         print("video_mask:", video_mask.size())
-        # object_mask = get_mask(video_o.size(2), object_len).bool().cuda()
         object_mask = (torch.arange(max_object_len).unsqueeze(1).to(video_o.device) < video_o.size(2)).repeat(1, max_object_len)
         print("object_mask size:", object_mask.size())
 
@@ -260,73 +203,10 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         print("** Processing Tube Predictions")
         # only keep box predictions in the annotated moment
         device = tube_pred["pred_boxes"].device
-        # inter_idx = batch["inter_idx"]
-        # frame_mapping = batch["frame_map"]
-        # keep_list = []
-        # TODO substitute this with bbox masks (keep the ones that mask == 1)
-        # for i_dur, inter in enumerate(inter_idx):
-        #     start_t, end_t = inter[0], inter[1]
-        #     # TODO find closest frame in frame_mapping
-        #     start_t_mapped = frame_mapping[i_dur][start_t]
-        #     end_t_mapped = frame_mapping[i_dur][end_t]
-        #     keep_list.extend(
-        #         [
-        #             elt
-        #             for elt in range(
-        #             start_t_mapped,
-        #             end_t_mapped + 1,
-        #         )
-        #         ]
-        #     )
-        # keep = torch.tensor(keep_list).long().to(device)
-        # print("keep indices: ", keep)
-        # TODO maybe keep all the boxes and base o bboxes predict time
-        print("pred_boxes before:", tube_pred["pred_boxes"].shape)
-        # tube_pred["pred_boxes"] = tube_pred["pred_boxes"][keep]
-        # print("pred_boxes after:", tube_pred["pred_boxes"].shape)
-        # for i_aux in range(len(outputs["aux_outputs"])):
-        #     outputs["aux_outputs"][i_aux]["pred_boxes"] = outputs["aux_outputs"][i_aux][
-        #         "pred_boxes"
-        #     ][keep]
-        # b = len(durations)
-
-        # bboxes -> (bs, t, 1, 4)
-
-        empty_box = [0,0,0,0]
-        print('All target bbox len batch 1:', len(bboxes[0]))
-
-        # Extract the last elements along the last dimension
-        # last_elements = bboxes[:, :, :, -4:]
-
-        # Check if the last elements are [0, 0, 0, 0]
-        # import numpy as np
-        # condition = np.all(last_elements == empty_box, axis=-1)
-
-        # keep only targets in the annotated moments
-        # bboxes = bboxes[condition]
-        # print('Non-empty target bbox len batch 1:', len(bboxes[0]))
-
         print(tube_pred["pred_boxes"][0, :, 0])
 
         # tube_pred["pred_boxes"] -> (bs*t)xnum_queriesx1
         # bboxes -> bsxtxnum_queriesx4
-
-        # bs = len(video_len)
-        # tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, -1, max_object_len, 1)
-
-        # print(tube_pred["pred_boxes"][0, 0, :, 0])
-
-        # get 4 positions of each predicted bbox as True
-        # Use boolean indexing to select the bounding boxes
-        # video_b = video_b.flatten(1,2)
-        # selected_bboxes = torch.zeros(video_b.shape).to(device)  # Initialize tensor for selected bounding boxes
-        # print("bbox app feat shape:", video_f.shape)
-        # print("bbox region feat shape:", video_o.shape)
-        # print("bbox loc shape:", video_b.shape)
-
-        # # TODO maybe adding mask for False objects of check if an empty bbox in loss calculation
-        # print("selected_bbox [0][5]", selected_bboxes[0][5])
-        # tube_pred["pred_boxes"] = selected_bboxes.clone()
 
         # compute losses
         loss_dict = {}
@@ -352,7 +232,7 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
                 time_mask = None
 
             if loc_criterion is not None:
-                loss_dict.update(loc_criterion(tube_pred["pred_boxes"], targets))
+                loss_dict.update(loc_criterion(tube_pred, batch))
 
         loss_dict.update({"loss_vqa": vqa_loss})
 

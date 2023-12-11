@@ -117,21 +117,6 @@ class Transformer(nn.Module):
         print("query_encoding shape:", query_encoding.shape)
         print("time_pos shape:", obj_pos.shape)
 
-        nan_count = torch.isnan(query_encoding).sum().item()
-
-        print(f"Number of NaN values in the query_encoding: {nan_count}")
-
-        nan_count = torch.isnan(vt_encoding).sum().item()
-
-        print(f"Number of NaN values in the vt_encoding: {nan_count}")
-
-        nan_count = torch.isnan(query_mask).sum().item()
-
-        print(f"Number of NaN values in the query_mask: {nan_count}")
-
-        nan_count = torch.isnan(vt_mask).sum().item()
-
-        print(f"Number of NaN values in the vt_mask: {nan_count}")
         hs = self.decoder(
             query_encoding=query_encoding,  # n_queriesx(bsize*t)xd_model
             vt_encoding=vt_encoding,  # 1x(bsize*t)xd_model
@@ -261,9 +246,6 @@ class TransformerDecoderLayer(nn.Module):
 
         q = self.with_pos_embed(query, query_pos)
         k = v = query
-        print("query shape:", query.shape)
-        print("vt_encoding shape:", vt_encoding.shape)
-        print("vt_mask shape:", vt_mask.shape)
         # Temporal Self attention
         tgt2, weights = self.self_attn(
             q,
