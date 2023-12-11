@@ -120,9 +120,10 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
             tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc * numf), max_object_len,
                                                                       -1)  # (bs*t)xnum_queriesx1 -> bsxtxnum_queriesx4
             evaluator.update(tube_pred["pred_boxes"])
-            localization_res = evaluator.summarize()
+            loc_output = evaluator.summarize()
 
-
+    # merge qa + localization results
+    output = {"qa": {"predictions": results, "acc": metrics["acc"]}, "loc": loc_output}
 
 
     step = "val" if not test else "test"
@@ -134,8 +135,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
         logging.info(f"{step} {k}: {v:.2%}")
         # break
 
-    # TODO fix metrics[acc] only
-    return metrics["acc"] / count, results
+    return output
 
 
 def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weight_dict, scheduler, epoch, args, tokenizer):

@@ -97,7 +97,6 @@ class STAREvaluator(object):
             iou_thresholds=iou_thresholds,
         )
         self.predictions = {}
-        self.video_predictions = {}
         self.results = None
         self.iou_thresholds = iou_thresholds
         self.save_pred = save_pred
@@ -138,6 +137,5 @@ class STAREvaluator(object):
         }
         if self.save_pred:
             out["predictions"] = self.predictions
-            out["video_predictions"] = self.video_predictions
             out["vid_metrics"] = self.results
         return out
