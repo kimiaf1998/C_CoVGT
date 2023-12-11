@@ -138,7 +138,7 @@ def main(args):
         for epoch in range(args.epochs):
             train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weight_dict, scheduler, epoch, args, tokenizer)
             outputs = eval(model, val_loader, a2v, args, test=False, tokenizer=tokenizer)
-            val_iou = outputs["loc"]["m_viou"]
+            val_iou = outputs["metrics"]["m_viou"]
             if val_iou > best_val_viou:
                 best_val_viou = val_iou
                 best_epoch = epoch

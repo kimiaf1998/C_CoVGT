@@ -139,8 +139,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
         },
         "metrics": {
             "acc": metrics["acc"] / count,
-            "viou": loc_output
-            }
+            }.update(loc_output)
         }
 
     step = "val" if not test else "test"
