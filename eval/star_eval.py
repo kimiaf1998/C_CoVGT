@@ -113,10 +113,10 @@ class STAREvaluator(object):
         metrics = {}
         counter = {}
         for category in categories:  # init metrics
-            metrics[category].update({"viou": 0})
+            metrics.update({category: {"viou": 0}})
             for thresh in self.iou_thresholds:
-                metrics[category].update({f"viou@{thresh}" : 0})
-            counter[category] = 0
+                metrics.update({category: {f"viou@{thresh}" : 0}})
+            counter.update({category : 0})
         for question_id, x in self.results.items():  # sum results
             metrics[question_id]["viou"] += x["viou"]
             for thresh in self.iou_thresholds:
