@@ -45,6 +45,7 @@ class STARiouEvaluator:
             gt_bboxes_mask = self.gt_bboxes_mask[idx]
             video_id = self.video_ids[idx]
             question_id = self.question_ids[idx]
+            question_id = '_'.join(question_id.split("_")[1:3])
 
             vid_metrics[question_id] = {
             }
@@ -107,7 +108,7 @@ class STAREvaluator(object):
         self.results = self.evaluator.evaluate(
             self.predictions
         )
-        categories = [x.split("_")[1:-2]+x.split("_")[-2:-1] for x in self.results.keys()]
+        categories = set(x for x in self.results.keys())
         print("categories:", categories)
         metrics = {}
         counter = {}
@@ -116,8 +117,7 @@ class STAREvaluator(object):
             for thresh in self.iou_thresholds:
                 metrics[category].update({f"viou@{thresh}" : 0})
             counter[category] = 0
-        for x in self.results.values():  # sum results
-            question_id = x.split("_")[1:-2]+x.split("_")[-2:-1]
+        for question_id, x in self.results.items():  # sum results
             metrics[question_id]["viou"] += x["viou"]
             for thresh in self.iou_thresholds:
                 metrics[question_id][f"viou@{thresh}"] += x[f"viou@{thresh}"]
