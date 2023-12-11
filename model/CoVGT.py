@@ -654,6 +654,7 @@ class VGT(nn.Module):
         seg_feats = None,
         seg_num = None,
         mode="vqa",
+        localization=False,
     ):
         """
         :param video: [bs, T, feature_dim]
@@ -663,6 +664,7 @@ class VGT(nn.Module):
         :param video_mask: [bs, T]
         :param text_mask: [bs, Q]
         :param object_mask: [bs, T, num_queries]
+        :param localization: True for tube prediction along with the answer
         """
         if mode == "vqa":
             answer_g, answer_w = (
@@ -736,8 +738,11 @@ class VGT(nn.Module):
                 video_o, _ = video[0], video[1]
                 X = self.encode_vid(video_o)  # (bs, numc*numf, numr, dmodel)
 
-                tube_preds = self.get_spatio_temporal_localization(object_encoding=X, vt_encoding=attended_v,
-                                                      object_mask=object_mask, vt_mask=video_mask.bool())
+                if localization:
+                    tube_preds = self.get_spatio_temporal_localization(object_encoding=X, vt_encoding=attended_v,
+                                                          object_mask=object_mask, vt_mask=video_mask.bool())
+                else:
+                    tube_preds = None
 
                 # mean-pool to obtain global reps
                 global_feat = attended_v.mean(dim=1)        #(bs, dmodal)

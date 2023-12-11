@@ -2,11 +2,12 @@ from pathlib import Path
 from typing import Dict, List
 
 import numpy as np
+import torch
 import tools.dist as dist
 
 import json
 from functools import reduce
-from tools.box_ops import np_box_iou
+from tools.box_ops import np_box_iou, box_cxcywh_to_xyxy
 
 
 class STARiouEvaluator:
@@ -23,20 +24,21 @@ class STARiouEvaluator:
         self.iou_thresholds = iou_thresholds
         self.targets = targets
 
-        self.video_ids = target["video_id"]
-        self.question_ids = target["question_id"]
-        self.gt_bboxes = target["bboxes"]
-        self.gt_bboxes_mask = target["bboxes_mask"]
-        self.frame_mapping = target["frame_mapping"]
+        self.video_ids = targets["video_id"]
+        self.question_ids = targets["question_id"]
+        self.gt_bboxes = targets["bboxes"]
+        self.gt_bboxes_mask = targets["bboxes_mask"]
+        self.frame_mapping = targets["frame_mapping"]
 
-    def evaluate(self, predictions: List[Dict]): # predictions => BxTxnum_quesriesx4
+    def evaluate(self, predictions: List[List]): # predictions => BxTxnum_quesriesx4
+        print("predictions:", predictions.shape)
         if len(predictions) < len(self.targets):
             raise RuntimeError(
-                f"{len(self.img2box) - len(predictions)} box predictions missing"
+                f"{len(self.targets) - len(predictions)} box predictions missing"
             )
         vid_metrics = {}
-        for idx, pred in enumerate(predictions):
-            pred_bboxes = pred["bboxes"]
+        for idx, pred_bboxes in enumerate(predictions): # iterate on video batches
+            pred_bboxes= box_cxcywh_to_xyxy(pred_bboxes)
 
             gt_bboxes = self.gt_bboxes[idx]
             gt_bboxes_mask = self.gt_bboxes_mask[idx]
@@ -50,7 +52,7 @@ class STARiouEvaluator:
 
             for pred_bb, gt_bb, gt_bb_mask in zip(pred_bboxes, gt_bboxes, gt_bboxes_mask):  # iterate on all frames of the annotated moment to update GT metrics
                 if gt_bb_mask: # if frame annotated
-                    iou_matrix = np_box_iou(np.array(gt_bb), np.array(pred_bb))
+                    iou_matrix = np_box_iou(gt_bb, pred_bb)
                     max_preds, _ = torch.max(iou_matrix, dim=1)
                     iou = torch.mean(max_preds).item()
                     viou += iou
@@ -97,7 +99,7 @@ class STAREvaluator(object):
         self.pred_sted = {}
 
     def update(self, predictions):
-        self.predictions.update(predictions)
+        self.predictions = predictions
 
     def summarize(self):
         self.results = self.evaluator.evaluate(

@@ -452,7 +452,7 @@ class VideoQADataset(Dataset):
             "qsn_seq_len": qsn_seq_len,
             "inter_idx": (start_t * fps, end_t * fps),
             "fps": fps,
-            "bboxes": bboxes,  # (numc*numf)x1
+            "bboxes": bboxes,  # (numc*numf)x1x4
             "bboxes_mask": bboxes_mask,  # (numc*numf)x1
             "frame_mapping": frame_map,
             # stored integer id instead of str for default-collate tensor conversion of elements

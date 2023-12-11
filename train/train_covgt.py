@@ -14,6 +14,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
     model.eval()
     count = 0
     metrics, counts = collections.defaultdict(int), collections.defaultdict(int)
+    print("** Evaluating **")
 
     with torch.no_grad():
         if not args.mc:
@@ -44,7 +45,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
             answer_mask = (answer!=tokenizer.pad_token_id).float() #RobBERETa
 
             print("video_o shape:", video_o.size())
-            bs, _, _, max_object_num, _ = video_o.size()
+            bs, numc, numf, max_object_num, _ = video_o.size()
             video_mask = get_mask(video_len, video_o.size(1)).cuda()
             print("video_mask:", video_mask.size())
             # object_mask = get_mask(object_len.flatten(0,1), max_object_num).bool().cuda()
@@ -60,7 +61,8 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                     text_mask=question_mask,
                     video_mask=video_mask,
                     object_mask=object_mask,
-                    seq_len = seq_len
+                    seq_len = seq_len,
+                    localization=True,
                 )
                 topk = torch.topk(predicts, dim=1, k=10).indices.cpu()
                 if args.dataset != "ivqa":
@@ -94,7 +96,8 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                     answer=answer,
                     seq_len = seq_len,
                     seg_feats = seg_feats,
-                    seg_num = seg_num
+                    seg_num = seg_num,
+                    localization = True,
                 )
                 # predicts = fusion_proj.squeeze()
 
@@ -110,7 +113,11 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
 
             # convert predicts from relative [0, 1] to absolute [0, height] coordinates
             # results = PostProcess()(tube_pred["pred_boxes"], vid_orig_size) # TODO load orig_size (needs maximum object finding among 10)
+            # tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc*numf), max_object_num, -1)
             evaluator = STAREvaluator(targets=batch)
+            bs, numc, numf, _, _ = video_o.size()
+            tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc * numf), max_object_len,
+                                                                      -1)  # (bs*t)xnum_queriesx1 -> bsxtxnum_queriesx4
             evaluator.update(tube_pred["pred_boxes"])
             evaluator.summarize()
 
@@ -154,7 +161,7 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
             batch['qsn_id'],            # qsn id among q choice (used for contrastive learning)
             batch['qsn_token_ids'],     # qsns token ids
             batch['qsn_seq_len'],        # length of qsns token ids
-            batch['bboxes']        # visual answer locations
+            batch['bboxes'].cuda()        # visual answer locations
         )
 
         video_len = batch["video_len"]
@@ -181,7 +188,8 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
                 text_mask=question_mask,
                 video_mask=video_mask,
                 object_mask=object_mask,
-                seq_len = seq_len
+                seq_len = seq_len,
+                localization=True,
             )
         else:
             fusion_proj, answer_proj, tube_pred = model(
@@ -193,7 +201,8 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
                 answer=answer.cuda(),
                 seq_len = seq_len,
                 seg_feats = seg_feats,
-                seg_num = seg_num
+                seg_num = seg_num,
+                localization=True,
             )   # outputs video and answer representation
 
             fusion_proj = fusion_proj.unsqueeze(2)
@@ -205,8 +214,6 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         device = tube_pred["pred_boxes"].device
         print(tube_pred["pred_boxes"][0, :, 0])
 
-        # tube_pred["pred_boxes"] -> (bs*t)xnum_queriesx1
-        # bboxes -> bsxtxnum_queriesx4
 
         # compute losses
         loss_dict = {}
@@ -232,12 +239,15 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
                 time_mask = None
 
             if loc_criterion is not None:
+                bs, numc, numf, _, _ = video_o.size()
+                tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc * numf), max_object_len,
+                                                                          -1)  # (bs*t)xnum_queriesx1 -> bsxtxnum_queriesx4
                 loss_dict.update(loc_criterion(tube_pred, batch))
 
         loss_dict.update({"loss_vqa": vqa_loss})
 
         if args.cl_loss:
-            vt_proj, txt_proj = model(
+            vt_proj, txt_proj, _ = model(
                 video,
                 question,
                 text_mask=qsn_mask,
@@ -246,11 +256,11 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
                 answer=qsn_token_ids,
                 seq_len = qsn_seq_len,
                 seg_feats = seg_feats,
-                seg_num = seg_num
+                seg_num = seg_num,
             )
             vt_proj = vt_proj.unsqueeze(2)
             cl_predicts = torch.bmm(txt_proj, vt_proj).squeeze()
-            cl_loss = criterion(cl_predicts, qsn_id.cuda())
+            cl_loss = qa_criterion(cl_predicts, qsn_id.cuda())
             loss_dict.update({"loss_cl": args.cl_loss*cl_loss})
             # cl_predicted = torch.max(cl_predicts, dim=1).indices.cpu()
             # running_acc.update((predicted == answer_id).sum().item() / N, N)
@@ -285,7 +295,7 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
 
         bbox_loss = loss_dict["loss_bbox"]
         giou_loss = loss_dict["loss_giou"]
-        sted_loss = loss_dict["loss_sted"]
+        # sted_loss = loss_dict["loss_sted"]
         losses = sum(
             loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict
         )

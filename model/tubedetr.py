@@ -14,7 +14,7 @@ import math
 
 from tools import box_ops, dist
 from torchvision.ops import generalized_box_iou
-# from util import box_ops
+from tools import box_ops
 
 from .space_time_decoder import build_transformer
 
@@ -158,29 +158,49 @@ class SetCriterion(nn.Module):
         The target boxes are expected in format (center_x, center_y, h, w), normalized by the image size.
         """
         assert "pred_boxes" in outputs
-        print("pred bbox shape:", outputs["pred_boxes"].shape)
+
         src_boxes = outputs["pred_boxes"]
-        num_queries = src_boxes.size(1)
+        target_boxes = targets["bboxes"] # bxtx1x4
+        target_boxes = target_boxes.to(src_boxes.device)
+        target_boxes_mask = targets["bboxes_mask"] # bxt
+
+
+        print("orig src_boxes:", src_boxes.shape)
+        print("orig tgt_boxes:", target_boxes.shape)
+        print("mask tgt_boxes:", target_boxes_mask.shape)
+
+
+        # keep gt boxes within the annotated moment
+        keep_indices = torch.nonzero(target_boxes_mask)
+        target_boxes = target_boxes[keep_indices[:,0], keep_indices[:,1], :, :]
+        src_boxes = src_boxes[keep_indices[:,0], keep_indices[:,1], :, :]
+
         src_boxes = src_boxes.reshape(-1, 4) # (b*t)xnum_queriesx4 => (bs*t*num_queries)x4
-        target_boxes = targets["bboxes"].expand(-1, num_queries, -1) # (b*t)x1x4 => (bs*t*num_queries)x4
+        src_boxes = box_ops.box_cxcywh_to_xyxy(src_boxes)
+        target_boxes = target_boxes.reshape(-1, 4) # (b*t*1)x4
 
         losses = {}
 
-        giou_matrix = generalized_box_iou(src_boxes, target_boxes)
+        giou_matrix = generalized_box_iou(
+            target_boxes,
+            src_boxes,
+        )
 
         # match predicted bboxes
         matched_bboxes_indices = torch.argmax(giou_matrix, dim=1)
-        matched_bboxes = src_boxes[..., matched_bboxes_indices]
+        print("matched_bboxes_indices shape:", matched_bboxes_indices.shape)
+        matched_bboxes = src_boxes[matched_bboxes_indices, ...]
         matched_gious = giou_matrix[..., matched_bboxes_indices]
 
-        losses["loss_giou"] = 1 - torch.mean(matched_gious).item()
-        print("loss_giou:", loss_giou)
-
+        print("matched_gious shape:", matched_gious.shape)
         print("matched_bboxes shape:", matched_bboxes.shape)
-        print("target_boxes shape:", matched_bboxes.shape)
+        print("target_boxes shape:", target_boxes.shape)
+
+        losses["loss_giou"] = 1 - torch.mean(matched_gious)
+        print("loss_giou:", losses["loss_giou"])
         # take the mean element-wise absolute value difference
         loss_bbox = F.l1_loss(matched_bboxes, target_boxes, reduction="mean")
-        losses["loss_bbox"] = loss_bbox.item()
+        losses["loss_bbox"] = loss_bbox
         print("loss_bbox:", loss_bbox)
         return losses
 
