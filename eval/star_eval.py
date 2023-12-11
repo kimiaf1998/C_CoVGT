@@ -7,7 +7,7 @@ import tools.dist as dist
 
 import json
 from functools import reduce
-from tools.box_ops import np_box_iou, box_cxcywh_to_xyxy
+from tools.box_ops import box_iou, box_cxcywh_to_xyxy
 
 
 class STARiouEvaluator:
@@ -37,10 +37,12 @@ class STARiouEvaluator:
                 f"{len(self.targets) - len(predictions)} box predictions missing"
             )
         vid_metrics = {}
+
         for idx, pred_bboxes in enumerate(predictions): # iterate on video batches
             pred_bboxes= box_cxcywh_to_xyxy(pred_bboxes)
-
+            print("pred_bboxes.device:", pred_bboxes.device)
             gt_bboxes = self.gt_bboxes[idx]
+            gt_bboxes = gt_bboxes.to(pred_bboxes.device)
             gt_bboxes_mask = self.gt_bboxes_mask[idx]
             video_id = self.video_ids[idx]
             question_id = self.question_ids[idx]
@@ -52,7 +54,7 @@ class STARiouEvaluator:
 
             for pred_bb, gt_bb, gt_bb_mask in zip(pred_bboxes, gt_bboxes, gt_bboxes_mask):  # iterate on all frames of the annotated moment to update GT metrics
                 if gt_bb_mask: # if frame annotated
-                    iou_matrix = np_box_iou(gt_bb, pred_bb)
+                    iou_matrix, _ = box_iou(gt_bb, pred_bb)
                     max_preds, _ = torch.max(iou_matrix, dim=1)
                     iou = torch.mean(max_preds).item()
                     viou += iou
@@ -60,7 +62,7 @@ class STARiouEvaluator:
             total_annotated_frames = torch.sum(gt_bboxes_mask).item()
             # compute viou@R
             viou = viou / total_annotated_frames
-            vid_metrics[video_id]["viou"] = viou
+            vid_metrics[question_id].update({"viou" : viou})
             recalls = {thresh: 0 for thresh in self.iou_thresholds}
             for thresh in self.iou_thresholds:
                 if viou > thresh:

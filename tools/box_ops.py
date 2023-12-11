@@ -7,7 +7,9 @@ import torch
 import numpy as np
 from torchvision.ops.boxes import box_area
 from typing import Tuple
-def torch_box_area(boxes: torch.Tensor) -> torch.Tensor:
+
+#### Bounding box utilities imported from torchvision and converted to numpy
+def np_box_area(boxes: np.array) -> np.array:
     """
     Computes the area of a set of bounding boxes, which are specified by its
     (x1, y1, x2, y2) coordinates.
@@ -20,25 +22,26 @@ def torch_box_area(boxes: torch.Tensor) -> torch.Tensor:
     Returns:
         area (Tensor[N]): area for each box
     """
-    assert boxes.dim() == 2 and boxes.size(-1) == 4
+    assert boxes.ndim == 2 and boxes.shape[-1] == 4
     return (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
 
 
 # implementation from https://github.com/kuangliu/torchcv/blob/master/torchcv/utils/box.py
 # with slight modifications
-def torch_box_inter_union(boxes1: torch.Tensor, boxes2: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-    area1 = torch_box_area(boxes1)
-    area2 = torch_box_area(boxes2)
+def _box_inter_union(boxes1: np.array, boxes2: np.array) -> Tuple[np.array, np.array]:
+    area1 = np_box_area(boxes1)
+    area2 = np_box_area(boxes2)
 
-    lt = torch.maximum(boxes1[:, None, :2], boxes2[:, :2])  # [N,M,2]
-    rb = torch.minimum(boxes1[:, None, 2:], boxes2[:, 2:])  # [N,M,2]
+    lt = np.maximum(boxes1[:, None, :2], boxes2[:, :2])  # [N,M,2]
+    rb = np.minimum(boxes1[:, None, 2:], boxes2[:, 2:])  # [N,M,2]
 
-    wh = (rb - lt).clamp(min=0)  # [N,M,2]
+    wh = (rb - lt).clip(min=0)  # [N,M,2]
     inter = wh[:, :, 0] * wh[:, :, 1]  # [N,M]
 
     union = area1[:, None] + area2 - inter
 
     return inter, union
+
 
 def np_box_iou(boxes1: np.array, boxes2: np.array) -> np.array:
     """
