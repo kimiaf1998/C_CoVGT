@@ -393,6 +393,7 @@ class VideoQADataset(Dataset):
                     # print(question_txt, choices, ans)
 
                 answer_txts = [question_txt + f' {self.tokenizer.sep_token} ' + opt for opt in choices]
+                qa = [question_txt, ans]
                 # print(answer_txts)
                 # if self.dset == 'causalvid':
                 # if vid_id in self.txt_obj:
@@ -439,6 +440,7 @@ class VideoQADataset(Dataset):
             "object_len": self.bbox_num,
             "question": question_embd,
             "question_txt": question_txt,
+            "qa": qa,
             "type": qtype,
             "answer_id": answer_id,
             "answer_txt": answer_txts,

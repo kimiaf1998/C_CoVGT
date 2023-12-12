@@ -400,6 +400,7 @@ def save_to(filename, data):
     added by junbin Xiao
     '''
     logging.info(f'Save to {filename}')
+    print(f'Save to {filename}')
     dirname = osp.dirname(filename)
     if not osp.exists(dirname):
         os.makedirs(dirname)

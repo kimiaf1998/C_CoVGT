@@ -100,7 +100,6 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                     seg_num = seg_num,
                     localization = True,
                 )
-                # predicts = fusion_proj.squeeze()
 
                 fusion_proj = fusion_proj.unsqueeze(2)
                 predicts = torch.bmm(answer_proj, fusion_proj).squeeze()
@@ -122,6 +121,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                                                                       -1)  # (bs*t)xnum_queriesx1 -> bsxtxnum_queriesx4
             evaluator.update(tube_pred["pred_boxes"])
             loc_output = evaluator.summarize()
+            loc_output = loc_output
 
     loc_predictions = loc_output["predictions"]
     loc_output.pop("predictions")
@@ -129,8 +129,8 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
     # merge qa + localization results
     output = { "results":{
         question_id: {
-            "prediction": {"desc": qa_predictions[question_id]['prediction'], "box": loc_predictions[question_id]['prediction']},
-            "answer": {"desc": qa_predictions[question_id]['answer'], "box": loc_predictions[question_id]['answer']}
+            "prediction": {"desc": qa_predictions[question_id]['prediction'], "box": loc_predictions[question_id]['prediction'].detach().cpu().tolist()},
+            "answer": {"desc": qa_predictions[question_id]['answer'], "box": loc_predictions[question_id]['answer'].detach().cpu().tolist()}
         }
         for question_id in loc_predictions.keys() # just going with annotated samples (having bbox)
         },
@@ -142,12 +142,9 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
     output["metrics"].update(loc_output)
 
     step = "val" if not test else "test"
-    # TODO add bbox metrics as well
-    for k in metrics:
-        v = metrics[k] / count
+    for k, v in output["metrics"].items():
         print(f"{step} {k}: {v:.2%}")
         logging.info(f"{step} {k}: {v:.2%}")
-        # break
 
     return output
 
