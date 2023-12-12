@@ -17,8 +17,8 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
     metrics, counts = collections.defaultdict(float), collections.defaultdict(int)
 
     qa_predictions = {}
-    question_ids = []
-    loc_pred_boxes, loc_ans_boxes = [], []
+    loc_predictions = {}
+
     outputs = {"results": {},
                "metrics": {}}
     print("** Evaluating **")
@@ -27,6 +27,8 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
         if not args.mc:
             model.module._compute_answer_embedding(a2v)
         for i, batch in enumerate(tqdm(data_loader, desc="Evaluating batches", unit="batch")):
+            if i == 5< 100:
+                break
             answer_id, answer, video_o, video_f, vid_orig_size, question, question_id, seg_feats, seg_num , bboxes, bboxes_mask = (
                 batch["answer_id"],
                 batch["answer"].cuda(),
@@ -128,13 +130,9 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                                                                           -1)  # (bs*t)xnum_queriesx1 -> bsxtxnum_queriesx4
                 evaluator.update(tube_pred["pred_boxes"])
                 loc_output = evaluator.summarize()
-                loc_predictions = loc_output["predictions"]
-
-                loc_pred_boxes.append(loc_predictions.values()['prediction'].detach().cpu().tolist())
-                loc_ans_boxes.append(loc_predictions.values()['answer'].detach().cpu().tolist())
-                question_ids.append(list(loc_predictions.keys()))
-
+                loc_predictions.update(loc_output["predictions"])
                 loc_output.pop("predictions")
+
                 for k, v in loc_output.items():
                     if k in outputs["metrics"]:
                         prev_val = outputs["metrics"][k]
@@ -143,26 +141,24 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                         new_val = v
                     outputs["metrics"].update({k: new_val})
 
-    print("outputs1:", outputs)
-
     # merge qa + localization results
     outputs["metrics"].update({"acc": metrics["acc"] / count})
     outputs["results"] = {
         question_id: {
-            "prediction": {"desc": qa_predictions[question_id]['prediction'], "box": loc_pred_boxes},
-            "answer": {"desc": qa_predictions[question_id]['answer'], "box": loc_ans_boxes}
+            "prediction": {"desc": qa_predictions[question_id]['prediction'],
+                           "box": loc_predictions[question_id]['prediction'].detach().cpu().tolist()},
+            "answer": {"desc": qa_predictions[question_id]['answer'],
+                       "box": loc_predictions[question_id]['answer'].detach().cpu().tolist()}
         }
-        for question_id in question_ids # just going with annotated samples (having bbox)
+        for question_id in loc_predictions.keys() # just going with annotated samples (having bbox)
         }
-
-    print("outputs2:", outputs)
 
     step = "val" if not test else "test"
     for k, v in output["metrics"].items():
         print(f"{step} {k}: {v:.2%}")
         logging.info(f"{step} {k}: {v:.2%}")
 
-    return output
+    return outputs
 
 
 def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weight_dict, scheduler, epoch, args, tokenizer):

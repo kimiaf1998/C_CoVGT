@@ -1,4 +1,5 @@
-from tubedetr import build
+from models.tubedetr import build
+from models.CoVGT import VGT
 
 def build_model(args):
     if args.lan == 'BERT':
@@ -30,4 +31,4 @@ def build_model(args):
         bnum=args.bnum,
         lan=args.lan)
 
-    return model
+    return model, tokenizer

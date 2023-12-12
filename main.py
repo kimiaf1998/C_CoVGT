@@ -10,6 +10,7 @@ import logging
 from transformers import get_cosine_schedule_with_warmup
 from args import get_args
 from models.CoVGT import VGT
+from models.Tube_CoVGT import build_model
 from loss import LogSoftmax
 from models.space_time_decoder import build_transformer
 from models.tubedetr import TubeDecoder, build
@@ -43,7 +44,7 @@ def main(args):
         logging.info(f"Length of Answer Vocabulary: {len(a2id)}")
 
     # Model
-    model = build_model(args)
+    model, tokenizer = build_model(args)
     model.cuda()
     logging.info("Using {} GPUs".format(torch.cuda.device_count()))
 
