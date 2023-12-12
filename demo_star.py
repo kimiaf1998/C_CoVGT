@@ -7,17 +7,20 @@ from args import get_args
 from PIL import Image
 import matplotlib.pyplot as plt
 
-from main import get_args_parser
+from transformers import RobertaTokenizerFast
+
 from models.Tube_CoVGT import build_model
-from models.postprocessors import PostProcessSTVG, PostProcess
 from datasets.video_transforms import prepare, make_video_transforms
-from util.misc import NestedTensor
+from tools.postprocess import PostProcess
+from tools.util import tokenize
 
 parser = argparse.ArgumentParser(
     "Demo test script", parents=[get_args()]
 )
+parser.add_argument('--load', default="", type=str, help='Provide a path to the model checkpoint')
 parser.add_argument('--vid_id', default="", type=str, help='Provide a video sample id')
 parser.add_argument('--question', default="", type=str, help='Provide a question related to the video sample')
+parser.add_argument('--answer', default="", type=str, help='Provide an answer to the provided question')
 parser.add_argument('--choices', nargs=4, type=int, help='Provide 4 answer choices as a list')
 
 args = parser.parse_args()
@@ -38,33 +41,65 @@ model.load_state_dict(checkpoint["models"], strict=False)
 print("checkpoint loaded")
 
 # load video (with eventual start & end) & caption demo examples
-question = args.question
+question_txt = args.question
+answer_txt = args.answer
 answer_choices = args.choices
 video_id = args.video_id
 
-"""num, denum = video_stream["avg_frame_rate"].split("/")
-video_fps = int(num) / int(denum)"""
-clip_start = (
-    args.start_example if args.start_example >= 0 else float(video_stream["start_time"])
+# load pre-extracted features
+video_o, _, video_f = get_video_feat_star(vid_id, qid, width, height)
+video = (video_o, video_f)
+
+print("video_o shape:", video_o.shape)  # Txnum_queriesxF
+max_object_len = video_o.size(1)
+
+################################################################
+
+
+tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
+answer_txts = [question_txt + f' {tokenizer.sep_token} ' + opt for opt in answer_choices]
+ans_id = answer_choices.index(answer_txt)
+num_words = len(answer_txts)
+
+# fetch tokens of questions & answer
+ans_token_ids, _ = tokenize(
+    answer_txts,
+    tokenizer,
+    add_special_tokens=True,
+    max_length=num_words,
+    dynamic_padding=False,
+    truncation=True
 )
-clip_end = (
-    args.end_example
-    if args.end_example > 0
-    else float(video_stream["start_time"]) + float(video_stream["duration"])
-)
-ss = clip_start
-t = clip_end - clip_start
-extracted_fps = (
-    min((args.fps * t), args.video_max_len) / t
-)  # actual fps used for extraction given that the models processes video_max_len frames maximum
-cmd = ffmpeg.input(vid_path, ss=ss, t=t).filter("fps", fps=extracted_fps)
-out, _ = cmd.output("pipe:", format="rawvideo", pix_fmt="rgb24").run(
-    capture_stdout=True, quiet=True
-)
-w = int(video_stream["width"])
-h = int(video_stream["height"])
-images_list = np.frombuffer(out, np.uint8).reshape([-1, h, w, 3])
-assert len(images_list) <= args.video_max_len
+seq_len = torch.tensor([len(ans) for ans in ans_token_ids], dtype=torch.long)
+
+bs, numc, numf, max_object_num, _ = video_o.size()
+
+with torch.no_grad():  # forward through the models
+    fusion_proj, answer_proj, tube_pred = model(
+        video,
+        answer=ans_token_ids,
+        seq_len=seq_len,
+        localization=True,
+    )
+
+    fusion_proj = fusion_proj.unsqueeze(2)
+    predicts = torch.bmm(answer_proj, fusion_proj).squeeze()
+
+    predicted = torch.max(predicts, dim=1).indices.cpu()
+
+    # calculate textual answer accuracy
+
+    output = {}
+    pred_id = predicted
+    pred = answer_choices[pred_id]
+    output.update({'question': question_txt, 'prediction': pred, 'answer': answer_txt})
+
+    # convert predicts from relative [0, 1] to absolute [0, height] coordinates
+    results = PostProcess()(tube_pred["pred_boxes"], vid_orig_size)
+
+
+################################################################
+
 image_ids = [[k for k in range(len(images_list))]]
 
 # video transforms
@@ -133,7 +168,7 @@ with torch.no_grad():  # forward through the models
         ax.imshow(img, aspect="auto")
 
         if (
-            pred_steds[0] <= img_id < pred_steds[1]
+                pred_steds[0] <= img_id < pred_steds[1]
         ):  # add predicted box if the image_id is in the predicted start and end
             x1, y1, x2, y2 = vidstg_res[img_id]["boxes"][0]
             w = x2 - x1

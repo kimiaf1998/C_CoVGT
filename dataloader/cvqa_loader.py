@@ -221,7 +221,7 @@ class VideoQADataset(Dataset):
         # print(bbox_feats.shape)
 
         # return bbox_feats without area
-        return region_feats, bbox_feats[..., :-1], app_feats, (width, height)
+        return region_feats, bbox_feats[..., :-1], app_feats
 
     def filter_bboxes_by_sampled_clips(self, data, vid_clips):
 
@@ -289,7 +289,7 @@ class VideoQADataset(Dataset):
         if self.dset == 'webvid':
             video_o, video_f = self.get_video_feat(vid_id, width, height)
         elif self.dset == 'STAR':
-            video_o, video_b, video_f, video_size = self.get_video_feat_star(vid_id, qid, width, height)
+            video_o, video_b, video_f = self.get_video_feat_star(vid_id, qid, width, height)
         else:
             video_o, video_f = self.get_video_feature(vid_id, width, height)
 

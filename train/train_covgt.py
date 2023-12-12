@@ -323,6 +323,12 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         optimizer.step()
         scheduler.step()
 
+        # Access the updated learning rate
+        current_lr = optimizer.param_groups[0]['lr']
+
+        # Print the updated learning rate
+        print(f'Learning Rate: {current_lr}')
+
         running_vqa_loss.update(vqa_loss.detach().cpu().item(), N)
         running_giou_loss.update(giou_loss.detach().cpu().item(), N)
         running_bbox_loss.update(bbox_loss.detach().cpu().item(), N)

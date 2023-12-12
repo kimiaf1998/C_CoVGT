@@ -10,6 +10,7 @@ import logging
 from transformers import get_cosine_schedule_with_warmup
 from args import get_args
 from models.CoVGT import VGT
+import models.tubedetr as tube_detector
 from models.Tube_CoVGT import build_model
 from loss import LogSoftmax
 from models.space_time_decoder import build_transformer
@@ -85,13 +86,13 @@ def main(args):
     if args.guided_attn:
         losses += ["guided_attn"]
 
-    loc_criterion = SetCriterion(
+    loc_criterion = tube_detector.SetCriterion(
         losses=losses,
         sigma=args.sigma,
     )
 
     loc_criterion.cuda()
-    
+
     qa_criterion = nn.CrossEntropyLoss(ignore_index=-1)
     # criterion = MultipleChoiceLoss()
     params_for_optimization = list(p for p in model.parameters() if p.requires_grad)
