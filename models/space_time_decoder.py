@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 from typing import List, Optional
 
-from model.position_encoding import TimeEmbeddingLearned, TimeEmbeddingSine, PositionalEmbeddingLearned, \
+from models.position_encoding import TimeEmbeddingLearned, TimeEmbeddingSine, PositionalEmbeddingLearned, \
     PositionalEncoding2D, PositionalEncoding1D
 
 
@@ -37,7 +37,7 @@ class Transformer(nn.Module):
         :param activation: transformer activation
         :param return_intermediate_dec: whether to return intermediate outputs of the decoder
         :param pass_pos_and_query: if True tgt is initialized to 0 and position is added at every layer
-        :param video_max_len: maximum number of frames in the model
+        :param video_max_len: maximum number of frames in the models
         :param no_tsa: whether to use temporal self-attention
         :param return_weights: whether to return attention weights
         :param learn_time_embed: whether to learn time encodings
@@ -212,7 +212,7 @@ class TransformerDecoderLayer(nn.Module):
         self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
         self.cross_attn_image = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
 
-        # Implementation of Feedforward model
+        # Implementation of Feedforward models
         self.linear1 = nn.Linear(d_model, dim_feedforward)
         self.dropout = nn.Dropout(dropout)
         self.linear2 = nn.Linear(dim_feedforward, d_model)

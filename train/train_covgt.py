@@ -79,7 +79,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
             else:
                 #############Model FLOPs##########
                 # inputs = (video, question, None, answer.cuda(), seq_len, video_mask, answer_mask)
-                # flops = FlopCountAnalysis(model, inputs)
+                # flops = FlopCountAnalysis(models, inputs)
                 # print('Model FLOPs:', flops.total()/1000000) #use batch_size 1
                 # break
                 ###################################
@@ -220,7 +220,6 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
             # Calculates dot-product or video and answer repr. to find the best match
             predicts = torch.bmm(answer_proj, fusion_proj).squeeze()
 
-        print("** Processing Tube Predictions **")
         # only keep box predictions in the annotated moment
         device = tube_pred["pred_boxes"].device
 

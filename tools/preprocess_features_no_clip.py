@@ -25,7 +25,7 @@ from util import load_file, save_to
 
 def build_resnet():
     if not hasattr(torchvision.models, args.model):
-        raise ValueError('Invalid model "%s"' % args.model)
+        raise ValueError('Invalid models "%s"' % args.model)
     if not 'resnet' in args.model:
         raise ValueError('Feature extraction only supports ResNets')
     cnn = getattr(torchvision.models, args.model)(pretrained=True)
@@ -72,7 +72,7 @@ def run_batch(cur_batch, model):
     """
     Args:
         cur_batch: treat a video as a batch of images
-        model: ResNet model for feature extraction
+        model: ResNet models for feature extraction
     Returns:
         ResNet extracted feature.
     """
@@ -96,7 +96,7 @@ def extract_clips_with_consecutive_frames(path, num_clips, num_frames_per_clip):
     Args:
         path: path of a video
         num_clips: expected numbers of splitted clips
-        num_frames_per_clip: number of frames in a single clip, pretrained model only supports 16 frames
+        num_frames_per_clip: number of frames in a single clip, pretrained models only supports 16 frames
     Returns:
         A list of raw features of clips.
     """
@@ -188,7 +188,7 @@ def extract_clip_frames(vpath, clips):
     Args:
         path: path of a video
         num_clips: expected numbers of splitted clips
-        num_frames_per_clip: number of frames in a single clip, pretrained model only supports 16 frames
+        num_frames_per_clip: number of frames in a single clip, pretrained models only supports 16 frames
     Returns:
         A list of raw features of clips.
     """
@@ -326,7 +326,7 @@ def generate_npy_byframe(model, video_dir, out_dir):
 def generate_h5(model, v_path, v_file, num_clips, outfile):
     """
     Args:
-        model: loaded pretrained model for feature extraction
+        model: loaded pretrained models for feature extraction
         video_ids: list of video ids
         num_clips: expected numbers of splitted clips
         outfile: path of output file to be written
@@ -368,7 +368,7 @@ def generate_h5(model, v_path, v_file, num_clips, outfile):
             if args.feature_type == 'appearance':
                 clip_feat = []
                 # for clip_id, clip in enumerate(clips):
-                #     feats = run_batch(clip, model)  # (16, 2048)
+                #     feats = run_batch(clip, models)  # (16, 2048)
                 #     feats = feats.squeeze()
                 #     clip_feat.append(feats)
                 # t4 = time.time()
@@ -434,7 +434,7 @@ if __name__ == '__main__':
     parser.add_argument('--image_width', default=112*2, type=int)
 
     # network params
-    parser.add_argument('--model', default='resnet101', choices=['resnet101', 'resnext101'], type=str)
+    parser.add_argument('--models', default='resnet101', choices=['resnet101', 'resnext101'], type=str)
     parser.add_argument('--seed', default='666', type=int, help='random seed')
     args = parser.parse_args()
     if args.model == 'resnet101':
@@ -456,7 +456,7 @@ if __name__ == '__main__':
         args.outfile = '../../data/{}/{}/{}_{}_{}_feat.h5'
         video_paths = tgif_qa.load_video_paths(args)
         random.shuffle(video_paths)
-        # load model
+        # load models
         if args.model == 'resnet101':
             model = build_resnet()
         elif args.model == 'resnext101':
@@ -480,7 +480,7 @@ if __name__ == '__main__':
         args.video_name_mapping = '/ceph-g/lethao/datasets/msvd/youtube_mapping.txt'
         video_paths = msvd_qa.load_video_paths(args)
         random.shuffle(video_paths)
-        # load model
+        # load models
         if args.model == 'resnet101':
             model = build_resnet()
         elif args.model == 'resnext101':

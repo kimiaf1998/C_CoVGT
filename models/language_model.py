@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers.activations import gelu
-from model.cmatt import CMAtten 
+from models.cmatt import CMAtten
 
 class Bert(nn.Module):
     """ Finetuned *BERT module """

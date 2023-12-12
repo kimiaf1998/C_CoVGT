@@ -2,7 +2,7 @@
 # Copyright (c) Aishwarya Kamath & Nicolas Carion. Licensed under the Apache License 2.0. All Rights Reserved
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """
-TubeDETR model and criterion classes.
+TubeDETR models and criterion classes.
 """
 from typing import Dict, Optional
 
@@ -53,9 +53,9 @@ class TubeDecoder(nn.Module):
         sted=False,
     ):
         """
-        :param transformer: transformer model
+        :param transformer: transformer models
         :param num_queries: number of object queries per frame
-        :param video_max_len: maximum number of frames in the model
+        :param video_max_len: maximum number of frames in the models
         :param guided_attn: whether to use guided attention loss
         :param sted: whether to predict start and end proba
         """
@@ -205,7 +205,7 @@ class SetCriterion(nn.Module):
     def forward(self, outputs, targets, inter_idx=None, time_mask=None):
         """This performs the loss computation.
         Parameters:
-             outputs: dict of tensors, see the output specification of the model for the format
+             outputs: dict of tensors, see the output specification of the models for the format
              targets: list of dicts, such that len(targets) == n_annotated_frames.
                       The expected keys in each dict depends on the losses applied, see each loss' doc
              inter_idx: list of [start index of the annotated moment, end index of the annotated moment] for each video

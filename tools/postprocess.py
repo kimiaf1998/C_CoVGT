@@ -2,13 +2,13 @@ from torch import nn
 import torch
 
 class PostProcess(nn.Module):
-    """This module converts the model's output into the format expected by the coco api"""
+    """This module converts the models's output into the format expected by the coco api"""
 
     @torch.no_grad()
     def forward(self, outputs, target_sizes):
         """Perform the computation
         Parameters:
-            outputs: raw outputs of the model
+            outputs: raw outputs of the models
             target_sizes: tensor of dimension [batch_size x 2] containing the size of each images of the batch
                           For evaluation, this must be the original image size (before any data augmentation)
                           For visualization, this should be the image size after data augment, but before padding

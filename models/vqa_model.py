@@ -1,21 +1,32 @@
-from model.EncoderVid import EncoderVid
+# Copyright 2022 Garena Online Private Limited
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from models.EncoderVid import EncoderVid
 from transformers.activations import gelu
 import torch.nn as nn
 import numpy as np
 import torch
 import math
-from model.language_model import Bert, AModel
+from models.language_model import AModel
 import copy
 from transformers.modeling_outputs import BaseModelOutput
 from transformers import BertConfig
-from transformers import RobertaConfig
-from model.graph import Graph
-from model.tubedetr import TubeDecoder
+from models.graph import Graph
 from util import get_mask
 import torch.nn.functional as F
-from model.cmatt import CMAtten
-import h5py
-import os.path as osp
+from models.cmatt import CMAtten
+
 
 def create_sinusoidal_embeddings(n_pos, dim, out):
     with torch.no_grad():
@@ -34,17 +45,10 @@ def create_sinusoidal_embeddings(n_pos, dim, out):
 class MultiHeadSelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
-        
-         ################BERT & RoBERTa#################
+
         self.n_heads = config.num_attention_heads #config.n_heads
         self.dim = config.hidden_size #config.dim
         dp_rate = config.attention_probs_dropout_prob #config.attention_dropout
-        
-        ################DisVGT#################
-        # self.n_heads = config.n_heads
-        # self.dim = config.dim
-        # dp_rate = config.attention_dropout
-        
         self.dropout = nn.Dropout(p=dp_rate)
 
         assert self.dim % self.n_heads == 0
@@ -90,6 +94,7 @@ class MultiHeadSelfAttention(nn.Module):
             return (
                 x.transpose(1, 2).contiguous().view(bs, -1, self.n_heads * dim_per_head)
             )
+
         q = shape(self.q_lin(query))  # (bs, n_heads, q_length, dim_per_head)
         k = shape(self.k_lin(key))  # (bs, n_heads, k_length, dim_per_head)
         v = shape(self.v_lin(value))  # (bs, n_heads, k_length, dim_per_head)
@@ -123,11 +128,6 @@ class FFN(nn.Module):
         super().__init__()
         dropout, dim, hidden_dim = config.attention_probs_dropout_prob, config.hidden_size, config.intermediate_size
         activation = config.hidden_act
-        ##########DisVGT###############
-        # dropout, dim, hidden_dim = config.attention_dropout, config.dim, config.hidden_dim
-        # activation = config.activation
-        
-        
 
         self.dropout = nn.Dropout(p=dropout)
         self.lin1 = nn.Linear(in_features=dim, out_features=hidden_dim)
@@ -149,11 +149,10 @@ class FFN(nn.Module):
 class TransformerBlock(nn.Module):
     def __init__(self, config):
         super().__init__()
-        dim = config.hidden_size
-        assert config.hidden_size % config.num_attention_heads == 0
-        #########DisVGT##########
         # dim = config.dim
+        dim = config.hidden_size
         # assert config.dim % config.n_heads == 0
+        assert dim % config.num_attention_heads == 0
 
         self.attention = MultiHeadSelfAttention(config)
         self.sa_layer_norm = nn.LayerNorm(normalized_shape=dim, eps=1e-12)
@@ -209,10 +208,9 @@ class TransformerBlock(nn.Module):
 class Transformer(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.n_layers = config.num_hidden_layers
-        ############DisBERT################
         # self.n_layers = config.n_layers
-       
+        self.n_layers = config.num_hidden_layers
+
         layer = TransformerBlock(config)
         self.layer = nn.ModuleList(
             [copy.deepcopy(layer) for _ in range(self.n_layers)]
@@ -304,6 +302,7 @@ class Embeddings(nn.Module):
             create_sinusoidal_embeddings(
                 n_pos=max_position_embeddings,
                 dim=d_model,
+                # out=self.position_embeddings.weight,
                 out=self.position_embeddings.weight,
             )
         self.modality_embedding = nn.Embedding(2, d_model)
@@ -328,7 +327,7 @@ class Embeddings(nn.Module):
         # if self.language_len != 0:
         #     modality_embeddings = self.modality_embedding(
         #         torch.tensor(
-        #             [0] * self.language_len + [1] * self.vision_len, dtype=torch.long
+        #             [0] * (seq_length-self.vision_len) + [1] * self.vision_len, dtype=torch.long
         #         ).to(embeddings.device)
         #     )
         #     embeddings = (
@@ -381,12 +380,10 @@ class POSEmbeddings(nn.Module):
         return embeddings, cpos_embed
 
 
-
 class VGT(nn.Module):
     def __init__(
         self,
-        tokenizer,
-        tube_detector,
+        bert_tokenizer,
         feature_dim=1024,
         word_dim=768,
         N=2,
@@ -400,7 +397,8 @@ class VGT(nn.Module):
         baseline="",
         n_negs=1,
         bnum=10,
-        lan='RoBERTa',
+        CM_PT=0,
+        dataset=""
     ):
         """
         :param feature_dim: dimension of the input video features
@@ -415,7 +413,8 @@ class VGT(nn.Module):
         :param vocab_size: size of the vocabulary for the masked language modeling head
         :param baseline: set as "qa" not to use the video
         :param n_negs: number of negatives sampled for cross-modal matching
-        :param bnum: number of feature regions
+        :param bnum: number of selected region proposals
+        :param CM_PT: whether use cross-modal petrained weights
         """
         super(VGT, self).__init__()
         self.baseline = baseline
@@ -423,9 +422,11 @@ class VGT(nn.Module):
         self.T = T
         self.n_negs = n_negs
         d_pos = 128
+        self.CM_PT = CM_PT
+        self.task = dataset.split['/'][-1]
         # video modules
         self.encode_vid = EncoderVid(feat_dim=feature_dim, 
-                                    bbox_dim=5,
+                                    bbox_dim=5, 
                                     feat_hidden=d_model, 
                                     pos_hidden=d_pos)
 
@@ -433,25 +434,18 @@ class VGT(nn.Module):
         self.norm_video = nn.LayerNorm(d_model, eps=1e-12)
 
         #####################clip position###################
+        # self.position_v = Embeddings(d_model, Q, T//4, dropout, True, d_pos)
         self.position_v = Embeddings(d_model, 20, 8, dropout, True, d_pos)
         #####################hie position###################
 
-        if lan == 'BERT':
-            pt_config_name = 'bert-base-uncased'
-            config = BertConfig
-        elif lan == 'RoBERTa':
-            pt_config_name = 'roberta-base'
-            config = RobertaConfig
-
-        self.config = config.from_pretrained(
-            pt_config_name,
+        self.config = BertConfig.from_pretrained(
+            "bert-base-uncased",
             num_hidden_layers=N,
             hidden_size=d_model,
             attention_probs_dropout_prob=dropout,
             intermediate_size=d_ff,
             num_attention_heads=h,
         )
-
         self.mmt = Transformer(self.config)
         self.vqproj = nn.Sequential(
                                   nn.Dropout(dropout), 
@@ -465,15 +459,15 @@ class VGT(nn.Module):
         self.mlm_loss_fct = nn.CrossEntropyLoss()
 
         # cross-modal matching head
-        # self.crossmodal_matching = nn.Linear(d_model, 1)
-        # self.cm_loss_fct = nn.BCELoss()
+        self.crossmodal_matching = nn.Linear(d_model, 1)
+        self.cm_loss_fct = nn.BCELoss()
 
         # weight initialization
         self.apply(self._init_weights)
         self.answer_embeddings = None
 
         # answer modules
-        self.amodel = AModel(tokenizer, lan=lan, out_dim=d_model)
+        self.amodel = AModel(bert_tokenizer, out_dim=d_model)
 
         self.merge_fr = nn.Sequential(
             nn.Linear(d_model*2, d_model),
@@ -488,8 +482,8 @@ class VGT(nn.Module):
         self.gnn = Graph(dim_in=d_model, dim_hidden=d_model//2,
                          dim_out=d_model, num_layers=2, dropout=dropout)
 
-        config_gt = config.from_pretrained(
-            pt_config_name,
+        config_gt = BertConfig.from_pretrained(
+            "bert-base-uncased",
             num_hidden_layers=N,
             hidden_size=bnum*bnum,
             dropout=dropout,
@@ -497,18 +491,20 @@ class VGT(nn.Module):
             attention_probs_dropout_prob=dropout,
             num_attention_heads=5,
         )
-
-        self.etrans = Transformer(config_gt)
-        self.ntrans = Transformer(self.config)
-        ###################cross-mode interaction###########
-        self.bidirec_att = CMAtten()
-        # self.final_proj = nn.Linear(d_model, 1) # classification layer
-
-
-        ################### Tube detection #################
-        self.tube_detector = tube_detector
+        #The pretrained models on webvid use N=10 region proposals, to adapt to NExT-QA
+        #which has different number of regions, please change the layer_name to a new one, e.g., graph_trans_n
+        if self.CM_PT and bnum != 10:
+            self.graph_trans_n = Transformer(config_gt)
+        else:
+            self.graph_trans = Transformer(config_gt) 
         
+        self.ttrans = Transformer(self.config)
+        # # # # ###############cross-mode interaction########### 
+        self.bidirec_att = CMAtten()
 
+        # self.final_proj = nn.Linear(d_model, 1) # classification in multi-choice QA
+        
+        
     def _init_weights(self, module):
         """Initialize the weights."""
         if isinstance(module, nn.Embedding):
@@ -522,19 +518,12 @@ class VGT(nn.Module):
         if isinstance(module, nn.Linear) and module.bias is not None:
             module.bias.data.zero_()
 
-
     def _compute_answer_embedding(self, a2v):
         self.answer_embeddings = self.get_answer_embedding(a2v)
 
     def get_answer_embedding(self, answer):
         answer_g, answer = self.amodel(answer)
         return answer_g, answer 
-
-   
-    def get_answer_seg_embedding(self, answer, seq_len, seg_feats, seg_num):
-        answer_g, answer = self.amodel(answer, seq_len, seg_feats, seg_num)
-        return answer_g, answer 
-
 
     def get_question_embedding(self, question):
         question = self.linear_question(question)
@@ -546,72 +535,60 @@ class VGT(nn.Module):
         video_o, video_f = video[0], video[1]
         video_f = self.linear_video(video_f)
         video_f = gelu(video_f)
-        video_f = self.norm_video(video_f) # (bs, numc, numf, dmodel)
+        video_f = self.norm_video(video_f) #(bs, numc, numf, dmodel)
         
 
-        bsize, numc, numf, numr, fdim = video_o.size()  # (bsize, n clips,n frames, n regions, feat dim)
-        bsize_lan, len_lan, dim_lan = language.size()   # (bsize * n answers, seq len, hidden dim)
+        bsize, numc, numf, numr, fdim = video_o.size()
+        bsize_lan, len_lan, dim_lan = language.size()
         ans_n = bsize_lan // bsize
        
         X = self.encode_vid(video_o) #(bs, numc*numf, numr, dmodel)
-    
-        ##NTrans ###
+
+        #######################NTrans ################################
         X = X.view(bsize, numc, numf, numr, -1).permute(0,1,3,2,4)
         short_mask = get_mask(torch.tensor([numf]*bsize*numc*numr, dtype=torch.long), numf).cuda()
-        # get attention on objects of different frames (Fo)
-        X = self.ntrans(X.reshape(bsize*numc*numr, numf, -1), short_mask)[0]
+        X = self.ttrans(X.reshape(bsize*numc*numr, numf, -1), short_mask)[0]
         X = X.reshape(bsize*numc, numr, numf, -1).permute(0,2,1,3)
         
-        # Xtrans = self.ttrans(X.reshape(bsize*numc*numr, numf, -1), short_mask)[0]
-        # Xtrans = Xtrans.view(bsize*numc*numf, numr, -1)
-        ##################################
-
+        ####################################################################
         hd_dim = X.shape[-1]
-        X = X.reshape(bsize*numc*numf, numr, hd_dim)
-        # get adjacency matrix of relations (R`)
+        X = X.reshape(bsize*numc*numf, numr, hd_dim)       
         A = self.gnn.build_graph(X) #(bs*numc*numf, numr, numr)
-        ##ETrans################
+        ####################################ETrans################
         A = A.view(bsize*numc, numf, numr*numr)
         graph_mask = get_mask(torch.tensor([numf]*bsize*numc, dtype=torch.long), numf).cuda()
-        # get attention on object relations from adjacent frames
-        A = self.etrans(x=A, attn_mask=graph_mask)[0]
+        #The pretrained models on webvid use N=10 region proposals, to adapt to NExT-QA
+        #which has different number of regions, please change the layer_name to a new one, e.g., graph_trans_n
+        if self.CM_PT and numr != 10:
+            A = self.graph_trans_n(x=A, attn_mask=graph_mask)[0]
+        else:
+            A = self.graph_trans(x=A, attn_mask=graph_mask)[0]
         A = A.view(bsize*numc*numf, numr, numr)
-        ##################################
+        ###################################################################
         A = F.softmax(A, dim=-1)
-        # Gout
-        X_o = self.gnn(X, A) # (bsize*numc*numf, numr, dmodel)
-        # add skip connection of node level reps (Fout)
+        X_o = self.gnn(X, A)
         X_o += X
         
-        satt = self.satt_pool(X_o)  # spatial conv on graph nodes at each frame (bsize*numc*numf, numr, 1)
-        # aggregate graph nodes at each frame
-        X_o = torch.sum(X_o*satt, dim=-2) # (bsize*numc*numf, 1, dmodel)
-        # X_o = X.mean(dim=-2)
+        satt = self.satt_pool(X_o)
+        X_o = torch.sum(X_o*satt, dim=-2)
 
-        X_o = X_o.view(bsize, numc, numf, -1) # (bsize, numc, numf, dmodel)
+        X_o = X_o.view(bsize, numc, numf, -1)
+        
+        video = self.merge_fr(torch.cat([video_f, X_o], dim=-1))
+       
+        #########frame-level cross-models interaction##############
+        if self.task in ['action', 'transition']:
+            xlen = numc*numf
+            video = video.view(bsize, xlen, -1)
+            video = self.cm_interaction(video, xlen, language, language_lens, ans_n)
+            video = video.view(bsize, numc, numf, -1)
+        #########cross-models interaction##############
 
-        video = self.merge_fr(torch.cat([video_f, X_o], dim=-1)) #  (bsize, numc, numf, dmodel)
-        # video = X_o
-        #########cross-model interaction##############
-        #uncomment this for TGIF-QA
-        # xlen = numc*numf
-        # video = video.view(bsize, xlen, -1)
-        # video = self.cm_interaction(video, xlen, language, language_lens, ans_n)
-        # video = video.view(bsize, numc, numf, -1)
-        #########cross-model interaction##############
+        video = video.mean(dim=-2)
 
-        # obtain clip-level feature reps (pooling)
-        video = video.mean(dim=-2) # (bs, numc, dmodel)
-
-
-
-        #####cross-model attention#############
-        # for clip-lve xlen=numc
-        # for frame-level xlen = numc * numf
-        # language = bsize * ans_n *  language_lens * d
-        # video = bsize * numc * dmodal
+        #####clip-level cross-models attention#############
         video = self.cm_interaction(video, numc, language, language_lens, ans_n)
-        #####cross-model attention#############
+        #####cross-models attention#############
         return video
 
     def cm_interaction(self, X, xlen, language, language_lens, ans_n=5):
@@ -629,12 +606,7 @@ class VGT(nn.Module):
         #max pool over different candicates
         X = Xatt.view(bsize, ans_n, xlen, -1).max(dim=1)[0] 
         return X
-
-    def get_spatio_temporal_localization(self, object_encoding, vt_encoding, object_mask, vt_mask):
-        tube_preds = self.tube_detector(object_encoding=object_encoding, vt_encoding=vt_encoding,
-                                        object_mask=object_mask, vt_mask=vt_mask.bool())
-        return tube_preds
-
+    
     def forward(
         self,
         video,
@@ -644,13 +616,8 @@ class VGT(nn.Module):
         seq_len = None,
         video_mask=None,
         text_mask=None,
-        object_mask=None,
-        att_mask=None,
         max_seq_len=0,
-        seg_feats = None,
-        seg_num = None,
         mode="vqa",
-        localization=False,
     ):
         """
         :param video: [bs, T, feature_dim]
@@ -659,18 +626,14 @@ class VGT(nn.Module):
         :param answer: [batch_size, amax_words, 300] used for contrastive loss training, otherwise precomputed at the vocabulary level
         :param video_mask: [bs, T]
         :param text_mask: [bs, Q]
-        :param object_mask: [bs, T, num_queries]
-        :param localization: True for tube prediction along with the answer
         """
         if mode == "vqa":
             answer_g, answer_w = (
                 self.get_answer_embedding(answer)
-                # self.get_answer_seg_embedding(answer, seq_len, seg_feats, seg_num)
                 if answer is not None
                 else self.answer_embeddings
             )
-            # answer_w = self.add_segid_embedding(answer_w, seq_len, seg_feats, seg_num)
-            if len(seq_len.squeeze().shape) == 1:
+            if self.Q != 0:
                 question_g, question_w = self.amodel(question)
                 if question_w.shape[1] < self.Q:
                     question_w = torch.cat(
@@ -693,86 +656,29 @@ class VGT(nn.Module):
                         ],
                         1,
                     )
-            if self.baseline == "qa":
-                # answer_seg = answer_w.mean(dim=1).view(answer_g.shape)
-                pred = self.final_proj(answer_g)
-                return pred, answer_g
-            elif len(seq_len.squeeze().shape) == 1:
-                # video_proj = self.get_vqa_embedding_rfcpos(video, question_w, seq_len)
-                # qv_cat = torch.cat([question_w, video_proj], dim=1)
-                # mask = torch.cat([text_mask, video_mask], dim=1)
-                # qv = self.position_v(qv_cat)
-                # attended_qv = self.mmt(x=qv, attn_mask=mask)[0]
-                # fusion_proj = self.vqproj(attended_qv[:, 0, :])
 
                 video_proj = self.get_vqa_embedding_rfcpos(video, question_w, seq_len)
                 video_proj = self.position_v(video_proj)
                 attended_qv = self.mmt(x=video_proj, attn_mask=video_mask)[0]
-
-                #  predict answer bboxes (tube decoder)
-                tube_preds = self.get_spatio_temporal_localization(object_encoding=X, vt_encoding=attended_qv,
-                                                      object_mask=object_mask, vt_mask=video_mask.bool())
-
                 global_feat = attended_qv.mean(dim=1)
                 fusion_proj = self.vqproj(global_feat)
             else:
                 video_proj = self.get_vqa_embedding_rfcpos(video, answer_w, seq_len)
-                
-                # bs, ansn, nc, fdim = video_proj.shape
-                # video_proj = video_proj.view(bs*ansn, nc, fdim) 
-                # batch_repeat = np.reshape(np.tile(np.expand_dims(np.arange(bs),
-                #                                             axis=1),[1, ansn]), [-1])
-                # video_mask = video_mask[batch_repeat]
 
-
-                # add learnable positional embedding
-                video_proj = self.position_v(video_proj)    # (bs, numc, dmodal)
-                # global transformer to capture temporal relations between video contents
-                attended_v = self.mmt(x=video_proj, attn_mask=video_mask)[0] # (bs, numc, dmodal)
-
-                # predict answer bboxes (tube decoder)
-                video_o, _ = video[0], video[1]
-                X = self.encode_vid(video_o)  # (bs, numc*numf, numr, dmodel)
-
-                if localization:
-                    tube_preds = self.get_spatio_temporal_localization(object_encoding=X, vt_encoding=attended_v,
-                                                          object_mask=object_mask, vt_mask=video_mask.bool())
-                else:
-                    tube_preds = None
-
-                # mean-pool to obtain global reps
-                global_feat = attended_v.mean(dim=1)        #(bs, dmodal)
+                video_proj = self.position_v(video_proj)
+                attended_v = self.mmt(x=video_proj, attn_mask=video_mask)[0]
+                global_feat = attended_v.mean(dim=1)
                 fusion_proj = self.vqproj(global_feat)
-                
-                # fusion_proj = fusion_proj.view(bs, ansn, -1)
-                
-                # nans = 5
-                # video_proj = self.get_vqa_embedding_rfcpos(video, answer_w, seq_len)
-                # bsize = video_proj.shape[0]
-                # batch_repeat = np.reshape(np.tile(np.expand_dims(np.arange(bsize),
-                #                                             axis=1),[1, nans]), [-1])
-                # video_proj = video_proj[batch_repeat]
-                
-                # text_mask = text_mask.view(bsize*nans, -1)
-                # video_mask = video_mask[batch_repeat]
-                # qv_cat = torch.cat([answer_w, video_proj], dim=1)
-                # mask = torch.cat([text_mask, video_mask], dim=1)
-                
-                # qv = self.position_v(qv_cat)
-                # attended_qv = self.mmt(x=qv, attn_mask=mask)[0]
-                # fusion_proj = self.vqproj(attended_qv[:, 0, :])
-                # fusion_proj = fusion_proj.view(bsize, nans, -1)
                 
             if fusion_proj is not None and answer_g.device != fusion_proj.device:
                 answer_g = answer_g.to(fusion_proj.device)
-            if answer is not None:  # mc , answer is a list of tokens
-                return fusion_proj, answer_g, tube_preds
+            if answer is not None:
+                return fusion_proj, answer_g
                 # return self.final_proj(fusion_proj*answer_g), answer_g
             else:
                 # pred = self.final_proj(fusion_proj*question_g)
-                # pred = fusion_proj @ answer_g.t()
                 pred = (fusion_proj @ answer_g.t()) * (question_g @ answer_g.t())
-                return pred, tube_preds
+                return pred
 
         elif mode == "mlm":
             if text_mask.shape[1] < max_seq_len:
@@ -806,16 +712,14 @@ class VGT(nn.Module):
                     ],
                     1,
                 )
-            # text_proj = self.get_question_embedding(text)
-            text_proj = text
 
-            prediction_logits = self.vocab_transform(text_proj)
+            prediction_logits = self.vocab_transform(text)
             prediction_logits = gelu(prediction_logits)
             prediction_logits = self.vocab_norm(prediction_logits)
             prediction_logits = self.vocab_projector(prediction_logits)
-            
+            # print(prediction_logits.shape, labels.shape)
             mlm_loss = self.mlm_loss_fct(
                 prediction_logits.view(-1, prediction_logits.size(-1)), labels.view(-1)
             )
-            
             return mlm_loss
+

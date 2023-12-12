@@ -9,14 +9,14 @@ import logging
 
 from transformers import get_cosine_schedule_with_warmup
 from args import get_args
-from model.CoVGT import VGT
+from models.CoVGT import VGT
 from loss import LogSoftmax
-from model.space_time_decoder import build_transformer
-from model.tubedetr import TubeDecoder, build
+from models.space_time_decoder import build_transformer
+from models.tubedetr import TubeDecoder, build
 from util import compute_a2v, load_model_by_key, save_to
 from dataloader.cvqa_loader import get_videoqa_loaders
 from train.train_covgt import train, eval
-
+from tqdm import tqdm
 
 
 def main(args):
@@ -33,14 +33,6 @@ def main(args):
     logging.info(args)
 
 
-    if args.lan == 'BERT':
-        from transformers import BertTokenizer
-        tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-    elif args.lan == 'RoBERTa':
-        from transformers import RobertaTokenizerFast,RobertaTokenizer
-        tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
-
-    
     a2id, id2a, a2v = None, None, None
     if not args.mc:
         a2id, id2a, a2v = compute_a2v(
@@ -51,31 +43,9 @@ def main(args):
         logging.info(f"Length of Answer Vocabulary: {len(a2id)}")
 
     # Model
-    # Space-time decoder
-
-    tube_detector, loc_criterion = build(args)
-    loc_criterion.cuda()
-
-    model = VGT(
-        tokenizer = tokenizer,
-        tube_detector=tube_detector,
-        feature_dim=args.feature_dim,
-        word_dim=args.word_dim,
-        N=args.n_layers,
-        d_model=args.embd_dim,
-        d_ff=args.ff_dim,
-        h=args.n_heads,
-        dropout=args.dropout,
-        T=args.video_max_len,
-        Q=args.qmax_words,
-        vocab_size = tokenizer.vocab_size,
-        baseline=args.baseline,
-        bnum=args.bnum,
-        lan=args.lan
-    )
+    model = build_model(args)
     model.cuda()
     logging.info("Using {} GPUs".format(torch.cuda.device_count()))
-
 
     weight_dict = {
         "loss_bbox": args.bbox_loss_coef,
@@ -90,7 +60,7 @@ def main(args):
     model = nn.DataParallel(model)
     
     if args.pretrain_path != "":
-        # model.load_state_dict(torch.load(args.pretrain_path))
+        # models.load_state_dict(torch.load(args.pretrain_path))
         model.load_state_dict(load_model_by_key(model, args.pretrain_path))
         logging.info(f"Loaded checkpoint {args.pretrain_path}")
     logging.info(
@@ -128,7 +98,7 @@ def main(args):
         )
         # TODO uncomment
         # if args.pretrain_path != "":
-        #     outputs = eval(model, val_loader, a2v, args, test=False, tokenizer=tokenizer)  # zero-shot VideoQA
+        #     outputs = eval(models, val_loader, a2v, args, test=False, tokenizer=tokenizer)  # zero-shot VideoQA
         #     val_iou = outputs["metrics"]["m_viou"]
         #     results = outputs["results"]
         #     save_path = osp.join(args.save_dir, 'val-res0.json')
@@ -137,7 +107,7 @@ def main(args):
         # best_val_viou = 0 if args.pretrain_path == "" else val_iou
         best_val_viou = 0
         best_epoch = 0
-        for epoch in range(args.epochs):
+        for epoch in tqdm(range(args.epochs), desc="Training on epoch", unit="epoch"):
             train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weight_dict, scheduler, epoch, args, tokenizer)
             outputs = eval(model, val_loader, a2v, args, test=False, tokenizer=tokenizer)
             val_iou = outputs["metrics"]["m_viou"]
@@ -148,16 +118,16 @@ def main(args):
                 torch.save(
                     model.state_dict(), os.path.join(args.save_dir, "best_model.pth")
                 )
-                logging.info(f"Best model have been saved in {os.path.join(args.save_dir, 'best_model.pth')}")
-                print(f"Best model have been saved in {os.path.join(args.save_dir, 'best_model.pth')}")
+                logging.info(f"Best models have been saved in {os.path.join(args.save_dir, 'best_model.pth')}")
+                print(f"Best models have been saved in {os.path.join(args.save_dir, 'best_model.pth')}")
                 save_path = osp.join(args.save_dir, 'val-res.json')
                 save_to(save_path, results)
             if args.dataset == 'webvid': 
                 ep_file = os.path.join(args.save_dir, f"e{epoch}.pth")
                 torch.save(model.state_dict(), ep_file)
                 logging.info('Save to '+ep_file)
-        logging.info(f"Best val model at epoch {best_epoch + 1} with m_viou {best_val_viou:.2f}")
-        print(f"Best val model at epoch {best_epoch + 1} with m_viou {best_val_viou:.2f}")
+        logging.info(f"Best val models at epoch {best_epoch + 1} with m_viou {best_val_viou:.2f}")
+        print(f"Best val models at epoch {best_epoch + 1} with m_viou {best_val_viou:.2f}")
     else:
         # Evaluate on val (=test) set
         outputs = eval(model, test_loader, a2v, args, test=False, tokenizer=tokenizer)  # zero-shot VideoQA
