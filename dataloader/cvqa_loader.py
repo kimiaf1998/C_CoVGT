@@ -393,7 +393,6 @@ class VideoQADataset(Dataset):
                     # print(question_txt, choices, ans)
 
                 answer_txts = [question_txt + f' {self.tokenizer.sep_token} ' + opt for opt in choices]
-                qa = [question_txt, ans]
                 # print(answer_txts)
                 # if self.dset == 'causalvid':
                 # if vid_id in self.txt_obj:
@@ -429,7 +428,6 @@ class VideoQADataset(Dataset):
             answer_txts = cur_sample["answer"]
             answer_id = self.a2id.get(answer_txts,
                                       -1)  # answer_id -1 if not in top answers, that will be considered as wrong prediction during evaluation
-
         return {
             "video_id": vid_id,
             "video_o": video_o,
@@ -440,7 +438,7 @@ class VideoQADataset(Dataset):
             "object_len": self.bbox_num,
             "question": question_embd,
             "question_txt": question_txt,
-            "qa": qa,
+            "choices": choices,
             "type": qtype,
             "answer_id": answer_id,
             "answer_txt": answer_txts,

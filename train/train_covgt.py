@@ -22,8 +22,6 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
             model.module._compute_answer_embedding(a2v)
         qa_predictions = {}
         for i, batch in enumerate(tqdm(data_loader, desc="Evaluating batches", unit="batch")):
-            if i == 10:
-                break
             answer_id, answer, video_o, video_f, vid_orig_size, question, question_id, seg_feats, seg_num , bboxes, bboxes_mask = (
                 batch["answer_id"],
                 batch["answer"].cuda(),
@@ -104,21 +102,28 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                 predicted = torch.max(predicts, dim=1).indices.cpu()
                 # calculate textual answer accuracy
                 metrics["acc"] += (predicted == answer_id).sum().item()
+                # choices are returned in the format of a list of mcx(bs tuples).
+                choices = batch["choices"]
+                questions = batch["question_txt"]
                 for bs, qid in enumerate(question_id):
-                    qa_predictions[qid] = {'prediction': int(predicted.numpy()[bs]), 'answer':int(answer_id.numpy()[bs])}
-                    # TODO map answer choice to answer value
+                    question = questions[bs]
+                    pred_id = int(predicted.numpy()[bs])
+                    ans_id = int(answer_id.numpy()[bs])
+                    pred = choices[pred_id][bs]
+                    ans = choices[ans_id][bs]
+                    qa_predictions[qid] = {'question': question, 'prediction': pred, 'answer':ans}
 
 
-            # convert predicts from relative [0, 1] to absolute [0, height] coordinates
-            # results = PostProcess()(tube_pred["pred_boxes"], vid_orig_size) # TODO load orig_size (needs maximum object finding among 10)
-            # tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc*numf), max_object_num, -1)
-            evaluator = STAREvaluator(targets=batch, save_pred=True)
-            bs, numc, numf, _, _ = video_o.size()
-            tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc * numf), max_object_len,
-                                                                      -1)  # (bs*t)xnum_queriesx1 -> bsxtxnum_queriesx4
-            evaluator.update(tube_pred["pred_boxes"])
-            loc_output = evaluator.summarize()
-            loc_output = loc_output
+                # convert predicts from relative [0, 1] to absolute [0, height] coordinates
+                # results = PostProcess()(tube_pred["pred_boxes"], vid_orig_size) # TODO load orig_size (needs maximum object finding among 10)
+                # tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc*numf), max_object_num, -1)
+                evaluator = STAREvaluator(targets=batch, save_pred=True)
+                bs, numc, numf, _, _ = video_o.size()
+                tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc * numf), max_object_len,
+                                                                          -1)  # (bs*t)xnum_queriesx1 -> bsxtxnum_queriesx4
+                evaluator.update(tube_pred["pred_boxes"])
+                loc_output = evaluator.summarize()
+                loc_output = loc_output
 
     loc_predictions = loc_output["predictions"]
     loc_output.pop("predictions")
@@ -158,8 +163,6 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         AverageMeter()
     )
     for i, batch in enumerate(tqdm(train_loader, desc="Training on batches", unit="batch")):
-        if i == 10:
-            break
         answer_id, answer, video_o, video_b, video_f, question, seg_feats, seg_num, qsn_id, qsn_token_ids, qsn_seq_len, bboxes = (
             batch["answer_id"],         # answer id among a choices
             batch["answer"],            # answers (qsn + answers (choices)) token ids

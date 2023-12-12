@@ -127,14 +127,15 @@ def main(args):
             f"Set cosine schedule with {len(train_loader) * args.epochs} iterations"
         )
         # TODO uncomment
-        if args.pretrain_path != "":
-            outputs = eval(model, val_loader, a2v, args, test=False, tokenizer=tokenizer)  # zero-shot VideoQA
-            val_iou = outputs["metrics"]["m_viou"]
-            results = outputs["results"]
-            save_path = osp.join(args.save_dir, 'val-res0.json')
-            save_to (save_path, results)
+        # if args.pretrain_path != "":
+        #     outputs = eval(model, val_loader, a2v, args, test=False, tokenizer=tokenizer)  # zero-shot VideoQA
+        #     val_iou = outputs["metrics"]["m_viou"]
+        #     results = outputs["results"]
+        #     save_path = osp.join(args.save_dir, 'val-res0.json')
+        #     save_to (save_path, results)
         # val_acc = 42.0
-        best_val_viou = 0 if args.pretrain_path == "" else val_iou
+        # best_val_viou = 0 if args.pretrain_path == "" else val_iou
+        best_val_viou = 0
         best_epoch = 0
         for epoch in range(args.epochs):
             train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weight_dict, scheduler, epoch, args, tokenizer)
@@ -158,11 +159,17 @@ def main(args):
         logging.info(f"Best val model at epoch {best_epoch + 1} with m_viou {best_val_viou:.2f}")
         print(f"Best val model at epoch {best_epoch + 1} with m_viou {best_val_viou:.2f}")
     else:
-        # Evaluate on test set
-        outputs = eval(model, test_loader, a2v, args, test=True, tokenizer=tokenizer)
+        # Evaluate on val (=test) set
+        outputs = eval(model, test_loader, a2v, args, test=False, tokenizer=tokenizer)  # zero-shot VideoQA
         results = outputs["results"]
-        save_path = osp.join(args.save_dir, 'test-res.json')
+        save_path = osp.join(args.save_dir, 'val-res0.json')
         save_to(save_path, results)
+        print("Model Validation Results:")
+        logging.info("Model Validation Results:")
+        step = "Test"
+        for k, v in outputs["metrics"].items():
+            print(f"{step} {k}: {v:.2%}")
+            logging.info(f"{step} {k}: {v:.2%}")
 
 
 if __name__ == "__main__":
