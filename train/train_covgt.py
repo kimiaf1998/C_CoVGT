@@ -15,12 +15,17 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
     model.eval()
     count = 0
     metrics, counts = collections.defaultdict(float), collections.defaultdict(int)
+
+    qa_predictions = {}
+    question_ids = []
+    loc_pred_boxes, loc_ans_boxes = [], []
+    outputs = {"results": {},
+               "metrics": {}}
     print("** Evaluating **")
 
     with torch.no_grad():
         if not args.mc:
             model.module._compute_answer_embedding(a2v)
-        qa_predictions = {}
         for i, batch in enumerate(tqdm(data_loader, desc="Evaluating batches", unit="batch")):
             answer_id, answer, video_o, video_f, vid_orig_size, question, question_id, seg_feats, seg_num , bboxes, bboxes_mask = (
                 batch["answer_id"],
@@ -123,25 +128,34 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                                                                           -1)  # (bs*t)xnum_queriesx1 -> bsxtxnum_queriesx4
                 evaluator.update(tube_pred["pred_boxes"])
                 loc_output = evaluator.summarize()
-                loc_output = loc_output
+                loc_predictions = loc_output["predictions"]
 
-    loc_predictions = loc_output["predictions"]
-    loc_output.pop("predictions")
+                loc_pred_boxes.append(loc_predictions.values()['prediction'].detach().cpu().tolist())
+                loc_ans_boxes.append(loc_predictions.values()['answer'].detach().cpu().tolist())
+                question_ids.append(list(loc_predictions.keys()))
+
+                loc_output.pop("predictions")
+                for k, v in loc_output.items():
+                    if k in outputs["metrics"]:
+                        prev_val = outputs["metrics"][k]
+                        new_val = (v + prev_val) / 2
+                    else:
+                        new_val = v
+                    outputs["metrics"].update({k: new_val})
+
+    print("outputs1:", outputs)
 
     # merge qa + localization results
-    output = { "results":{
+    outputs["metrics"].update({"acc": metrics["acc"] / count})
+    outputs["results"] = {
         question_id: {
-            "prediction": {"desc": qa_predictions[question_id]['prediction'], "box": loc_predictions[question_id]['prediction'].detach().cpu().tolist()},
-            "answer": {"desc": qa_predictions[question_id]['answer'], "box": loc_predictions[question_id]['answer'].detach().cpu().tolist()}
+            "prediction": {"desc": qa_predictions[question_id]['prediction'], "box": loc_pred_boxes},
+            "answer": {"desc": qa_predictions[question_id]['answer'], "box": loc_ans_boxes}
         }
-        for question_id in loc_predictions.keys() # just going with annotated samples (having bbox)
-        },
-        "metrics": {
-            "acc": metrics["acc"] / count,
-            }
+        for question_id in question_ids # just going with annotated samples (having bbox)
         }
-    # Update the "metrics" dictionary with loc metrics
-    output["metrics"].update(loc_output)
+
+    print("outputs2:", outputs)
 
     step = "val" if not test else "test"
     for k, v in output["metrics"].items():
