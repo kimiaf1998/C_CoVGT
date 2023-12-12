@@ -631,10 +631,6 @@ class VGT(nn.Module):
         return X
 
     def get_spatio_temporal_localization(self, object_encoding, vt_encoding, object_mask, vt_mask):
-        print("object_encoding shape:", object_encoding.shape)
-        print("vt shape:", vt_encoding.shape)
-        print("object_mask shape:", object_mask.shape)
-        print("video_mask shape:", vt_mask.shape)
         tube_preds = self.tube_detector(object_encoding=object_encoding, vt_encoding=vt_encoding,
                                         object_mask=object_mask, vt_mask=vt_mask.bool())
         return tube_preds

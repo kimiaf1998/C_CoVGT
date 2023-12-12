@@ -124,10 +124,6 @@ class TubeDecoder(nn.Module):
         if self.sted:
             outputs_sted = self.sted_embed(hs)
 
-        print("hs shape:", hs.shape)
-        # hs = hs.flatten(1, 2)  # n_layersx(b*t)xnum_queriesxf
-
-        print("pred_boxes hs : ", hs[-1][0,:,0])
         outputs_coord = self.bbox_embed(hs).sigmoid() # n_layersx(b*t)xnum_queriesx4
         out.update({"pred_boxes": outputs_coord[-1]}) # fetch last-layer output ->  (b*t)xnum_queriesx4
         if self.sted:
@@ -186,11 +182,11 @@ class SetCriterion(nn.Module):
         matched_gious = giou_matrix[..., matched_bboxes_indices]
 
         losses["loss_giou"] = 1 - torch.mean(matched_gious)
-        print("loss_giou:", losses["loss_giou"])
+        print(f"loss_giou: {losses['loss_giou'].item():2f}")
         # take the mean element-wise absolute value difference
         loss_bbox = F.l1_loss(matched_bboxes, target_boxes, reduction="mean")
         losses["loss_bbox"] = loss_bbox
-        print("loss_bbox:", loss_bbox)
+        print(f"loss_bbox: {loss_bbox.item():2f}")
         return losses
 
     def get_loss(
