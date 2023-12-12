@@ -6,6 +6,7 @@ import collections
 from util import compute_aggreeings, AverageMeter, get_mask, mask_tokens
 import os.path as osp
 import json
+from tqdm import tqdm
 #from fvcore.nn import FlopCountAnalysis
 from tools.postprocess import PostProcess
 from eval.star_eval import STAREvaluator
@@ -20,9 +21,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
         if not args.mc:
             model.module._compute_answer_embedding(a2v)
         qa_predictions = {}
-        for i, batch in enumerate(data_loader):
-            if i==2:
-                break
+        for i, batch in enumerate(tqdm(data_loader, desc="Evaluating batches", unit="batch")):
             answer_id, answer, video_o, video_f, vid_orig_size, question, question_id, seg_feats, seg_num , bboxes, bboxes_mask = (
                 batch["answer_id"],
                 batch["answer"].cuda(),
@@ -44,14 +43,10 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
             question_mask = (question!=tokenizer.pad_token_id).float() #RobBERETa
             answer_mask = (answer!=tokenizer.pad_token_id).float() #RobBERETa
 
-            print("video_o shape:", video_o.size())
             bs, numc, numf, max_object_num, _ = video_o.size()
             video_mask = get_mask(video_len, video_o.size(1)).cuda()
-            print("video_mask:", video_mask.size())
-            # object_mask = get_mask(object_len.flatten(0,1), max_object_num).bool().cuda()
-            print("object_len:", max_object_len)
             object_mask = (torch.arange(max_object_len).unsqueeze(1).to(video_o.device) < video_o.size(2)).repeat(1, max_object_len)
-            print("object_mask size:", object_mask.size())
+
             count += answer_id.size(0)
             video = (video_o, video_f)
             if not args.mc:
@@ -160,9 +155,7 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         AverageMeter(),
         AverageMeter()
     )
-    for i, batch in enumerate(train_loader):
-        if i == 5:
-            break
+    for i, batch in enumerate(tqdm(train_loader, desc="Training on batches", unit="batch")):
         answer_id, answer, video_o, video_b, video_f, question, seg_feats, seg_num, qsn_id, qsn_token_ids, qsn_seq_len, bboxes = (
             batch["answer_id"],         # answer id among a choices
             batch["answer"],            # answers (qsn + answers (choices)) token ids
@@ -183,11 +176,8 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
 
         question_mask = (question != tokenizer.pad_token_id).float().cuda() #RobBERETa
         answer_mask = (answer!=tokenizer.pad_token_id).float().cuda() #RobBERETa
-        print("video_o shape:", video_o.size())
         video_mask = get_mask(video_len, video_o.size(1)).cuda()
-        print("video_mask:", video_mask.size())
         object_mask = (torch.arange(max_object_len).unsqueeze(1).to(video_o.device) < video_o.size(2)).repeat(1, max_object_len)
-        print("object_mask size:", object_mask.size())
 
         qsn_mask = (qsn_token_ids != tokenizer.pad_token_id).float().cuda()
 

@@ -164,12 +164,6 @@ class SetCriterion(nn.Module):
         target_boxes = target_boxes.to(src_boxes.device)
         target_boxes_mask = targets["bboxes_mask"] # bxt
 
-
-        print("orig src_boxes:", src_boxes.shape)
-        print("orig tgt_boxes:", target_boxes.shape)
-        print("mask tgt_boxes:", target_boxes_mask.shape)
-
-
         # keep gt boxes within the annotated moment
         keep_indices = torch.nonzero(target_boxes_mask)
         target_boxes = target_boxes[keep_indices[:,0], keep_indices[:,1], :, :]
@@ -188,13 +182,8 @@ class SetCriterion(nn.Module):
 
         # match predicted bboxes
         matched_bboxes_indices = torch.argmax(giou_matrix, dim=1)
-        print("matched_bboxes_indices shape:", matched_bboxes_indices.shape)
         matched_bboxes = src_boxes[matched_bboxes_indices, ...]
         matched_gious = giou_matrix[..., matched_bboxes_indices]
-
-        print("matched_gious shape:", matched_gious.shape)
-        print("matched_bboxes shape:", matched_bboxes.shape)
-        print("target_boxes shape:", target_boxes.shape)
 
         losses["loss_giou"] = 1 - torch.mean(matched_gious)
         print("loss_giou:", losses["loss_giou"])

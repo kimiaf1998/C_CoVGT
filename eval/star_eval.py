@@ -135,13 +135,12 @@ class STAREvaluator(object):
             for thresh in self.iou_thresholds:
                 metrics[question_cat][f"viou@{thresh}"] += x[f"viou@{thresh}"]
             counter[question_cat] += 1
-
         for category in categories:  # average results per category
             for key in metrics[category]: # used to be qid
                 metrics[category][key] = metrics[category][key] / counter[category]
                 print(f"{category} {key}: {metrics[category][key]:.4f}")
             m_viou += metrics[category]["viou"]
-        m_viou /= (len(category))
+        m_viou /= (len(categories))
         out = {
             f"{question_id}_{name}": metrics[question_id][name]
             for question_id in metrics

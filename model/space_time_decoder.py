@@ -113,10 +113,6 @@ class Transformer(nn.Module):
         obj_pos = self.obj_embed(query_encoding.transpose(0, 1)) # n_queriesx(bsize*t)xd_model -> (bsize*t)xn_queriesxd_model
         # time_pos = self.time_embed(video_max_len).repeat(bsize, n_queries,1).transpose(0,1)
 
-        print("** SPACE TIME DECODER **")
-        print("query_encoding shape:", query_encoding.shape)
-        print("time_pos shape:", obj_pos.shape)
-
         hs = self.decoder(
             query_encoding=query_encoding,  # n_queriesx(bsize*t)xd_model
             vt_encoding=vt_encoding,  # 1x(bsize*t)xd_model
