@@ -11,8 +11,7 @@ def build_model(args):
 
     # Space-time decoder
 
-    tube_detector, loc_criterion = build(args)
-    loc_criterion.cuda()
+    tube_detector = build(args)
 
     model = VGT(
         tokenizer = tokenizer,
@@ -31,4 +30,4 @@ def build_model(args):
         bnum=args.bnum,
         lan=args.lan)
 
-    return model, tokenizer
+    return model, tokenizer,

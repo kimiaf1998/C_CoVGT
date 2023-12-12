@@ -4,7 +4,7 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
 	--mc=4 \
 	--bnum=10 \
 	--epochs=20 \
-	--lr=0.00001 \
+	--lr=5e-5 \
 	--qmax_words=30 \
 	--amax_words=38 \
 	--video_max_len=32 \
@@ -22,7 +22,6 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
 	--save_dir='../data/save_models/STAR/CoVGT/' \
 	--pretrain_path=../data/save_models/nextqa/CoVGT_FTCoWV/best_model.pth\
 	--num_queries=10 \
-	--ema \
 	--no_guided_attn \
 	--no_sted \
 

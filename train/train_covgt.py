@@ -152,7 +152,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
         }
 
     step = "val" if not test else "test"
-    for k, v in output["metrics"].items():
+    for k, v in outputs["metrics"].items():
         print(f"{step} {k}: {v:.2%}")
         logging.info(f"{step} {k}: {v:.2%}")
 

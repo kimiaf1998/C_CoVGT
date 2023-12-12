@@ -182,11 +182,11 @@ class SetCriterion(nn.Module):
         matched_gious = giou_matrix[..., matched_bboxes_indices]
 
         losses["loss_giou"] = 1 - torch.mean(matched_gious)
-        print(f"loss_giou: {losses['loss_giou'].item():2f}")
+        print(f"loss_giou: {losses['loss_giou'].item():.2f}")
         # take the mean element-wise absolute value difference
         loss_bbox = F.l1_loss(matched_bboxes, target_boxes, reduction="mean")
         losses["loss_bbox"] = loss_bbox
-        print(f"loss_bbox: {loss_bbox.item():2f}")
+        print(f"loss_bbox: {loss_bbox.item():.2f}")
         return losses
 
     def get_loss(
@@ -239,14 +239,6 @@ def build(args):
     # if args.guided_attn:
     #     weight_dict["loss_guided_attn"] = args.guided_attn_loss_coef
 
-    losses = ["boxes", "sted"] if args.sted else ["boxes"]
-    if args.guided_attn:
-        losses += ["guided_attn"]
-
-    criterion = SetCriterion(
-        losses=losses,
-        sigma=args.sigma,
-    )
     # criterion = nn.BCELoss()
 
-    return tube_detector, criterion
+    return tube_detector
