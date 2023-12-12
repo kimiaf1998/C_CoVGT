@@ -34,6 +34,10 @@ def main(args):
     rootLogger.addHandler(fileHandler)
     logging.info(args)
 
+    # Model
+    model, tokenizer = build_model(args)
+    model.cuda()
+    logging.info("Using {} GPUs".format(torch.cuda.device_count()))
 
     a2id, id2a, a2v = None, None, None
     if not args.mc:
@@ -43,11 +47,6 @@ def main(args):
             amax_words=args.amax_words,
         )
         logging.info(f"Length of Answer Vocabulary: {len(a2id)}")
-
-    # Model
-    model, tokenizer = build_model(args)
-    model.cuda()
-    logging.info("Using {} GPUs".format(torch.cuda.device_count()))
 
     weight_dict = {
         "loss_bbox": args.bbox_loss_coef,
@@ -131,10 +130,10 @@ def main(args):
                 best_val_viou = val_iou
                 best_epoch = epoch
                 torch.save(
-                    model.state_dict(), os.path.join(args.save_dir, "best_model.pth")
+                    model.state_dict(), os.path.join(args.save_dir, f'best_model_mviou_{val_iou}.pth')
                 )
-                logging.info(f"Best models have been saved in {os.path.join(args.save_dir, 'best_model.pth')}")
-                print(f"Best models have been saved in {os.path.join(args.save_dir, 'best_model.pth')}")
+                logging.info(f"Best models have been saved in {os.path.join(args.save_dir, f'best_model_mviou_{val_iou}.pth')}")
+                print(f"Best models have been saved in {os.path.join(args.save_dir, f'best_model_mviou_{val_iou}.pth')}")
                 save_path = osp.join(args.save_dir, 'val-res.json')
                 save_to(save_path, results)
             if args.dataset == 'webvid': 
