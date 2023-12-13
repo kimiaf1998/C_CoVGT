@@ -329,10 +329,11 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         scheduler.step()
 
         # Access the updated learning rate
-        current_lr = optimizer.param_groups[0]['lr']
+        current_lr = round(optimizer.param_groups[0]['lr'], 8)
 
         # Print the updated learning rate
         print(f'Learning Rate: {current_lr}')
+        logging.info(f'Learning Rate: {current_lr}')
 
         running_vqa_loss.update(vqa_loss.detach().cpu().item(), N)
         running_giou_loss.update(giou_loss.detach().cpu().item(), N)
@@ -355,7 +356,15 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
             log += f", BBox L1 Loss: {running_bbox_loss.avg:.4f}, gIoU Loss: {running_giou_loss.avg:.4f} "
             logging.info(log
             )
-            running_acc.reset()
-            running_vqa_loss.reset()
-            running_mlm_loss.reset()
-            running_cl_loss.reset()
+            # running_acc.reset()
+            # running_vqa_loss.reset()
+            # running_mlm_loss.reset()
+            # running_cl_loss.reset()
+
+    # return avg losses over the batch
+    return {
+        "giou_loss:", running_giou_loss.avg,
+        "box_loss:", running_bbox_loss.avg,
+        "vqa_loss:", running_vqa_loss.avg,
+    }
+

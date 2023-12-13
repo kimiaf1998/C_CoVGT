@@ -118,8 +118,10 @@ def main(args):
         val_acc = 0.0
         best_epoch = 0
         epochs_val = []
+        epochs_loss = []
         for epoch in tqdm(range(args.epochs), desc="Training on epoch", unit="epoch"):
-            train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weight_dict, scheduler, epoch, args, tokenizer)
+            losses_dict = train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weight_dict, scheduler, epoch, args, tokenizer)
+            epochs_loss.append(losses_dict)
             outputs = eval(model, val_loader, a2v, args, test=False, tokenizer=tokenizer)
             val_iou = outputs["metrics"]["m_viou"]
             val_acc = outputs["metrics"]["acc"]
@@ -129,10 +131,10 @@ def main(args):
                 best_val_viou = val_iou
                 best_epoch = epoch
                 torch.save(
-                    model.state_dict(), os.path.join(args.save_dir, f'best_model_mviou_{val_iou}_acc_{val_acc}.pth')
+                    model.state_dict(), os.path.join(args.save_dir, f'best_model_mviou_{val_iou:.2f}_acc_{val_acc:.2f}.pth')
                 )
-                logging.info(f"Best models have been saved in {os.path.join(args.save_dir, f'best_model_mviou_{val_iou}_acc_{val_acc}.pth')}")
-                print(f"Best models have been saved in {os.path.join(args.save_dir, f'best_model_mviou_{val_iou}_acc_{val_acc}.pth')}")
+                logging.info(f"Best models have been saved in {os.path.join(args.save_dir, f'best_model_mviou_{val_iou:.2f}_acc_{val_acc:.2f}.pth')}")
+                print(f"Best models have been saved in {os.path.join(args.save_dir, f'best_model_mviou_{val_iou:.2f}_acc_{val_acc:.2f}.pth')}")
                 save_path = osp.join(args.save_dir, 'val-res.json')
                 save_to(save_path, results)
             if args.dataset == 'webvid': 
@@ -140,14 +142,24 @@ def main(args):
                 torch.save(model.state_dict(), ep_file)
                 logging.info('Save to '+ep_file)
 
-        # Plotting the validation results
+        # Fetch validation and loss results
         epochs = range(len(epochs_val))
-        epochs_val_items = {}
+        epochs_val_items = {"m_viou": [], "acc": []}
+        epochs_loss_items = {}
         for key in epochs_val[0].keys():
             epochs_val_items[key] = [d[key] for d in epochs_val]
 
+        for epoch in args.epochs:
+            for val_key in epochs_val.keys():
+                epochs_val_items[val_key].append(epochs_val[epoch][val_key])
+            for loss_key in epochs_loss.keys():
+                epochs_loss_items[loss_key].append(epochs_loss[epoch][loss_key])
+
+        # Plot validation and loss results
         for metric, val in epochs_val_items.items():
             plot_and_save_epochs_res(epochs, val, ylabel=metric, save_path=args.save_dir)
+        for metric, loss in epochs_loss_items.items():
+            plot_and_save_epochs_res(epochs, loss, ylabel=metric, save_path=args.save_dir)
 
         logging.info(f"Best val models at epoch {best_epoch + 1} with m_viou {best_val_viou:.2f} and acc {val_acc:.2f}")
         print(f"Best val models at epoch {best_epoch + 1} with m_viou {best_val_viou:.2f} and acc {val_acc:.2f}")
