@@ -142,7 +142,7 @@ def main(args):
         # Plotting the validation results
         epochs = range(len(epochs_val))
         epochs_val_avg = {}
-        for key in data[0].keys():
+        for key in epochs_val[0].keys():
             epochs_val_avg[key] = round(np.mean([d[key] for d in epochs_val]), 2)
 
         for metric, val in epochs_val_avg:
