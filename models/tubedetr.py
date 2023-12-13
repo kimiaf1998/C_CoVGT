@@ -168,6 +168,10 @@ class SetCriterion(nn.Module):
         src_boxes = src_boxes.reshape(-1, 4) # (b*t)xnum_queriesx4 => (bs*t*num_queries)x4
         src_boxes = box_ops.box_cxcywh_to_xyxy(src_boxes)
         target_boxes = target_boxes.reshape(-1, 4) # (b*t*1)x4
+        #
+        # print("target_boxes:",target_boxes)
+        # print("src_boxes:",src_boxes)
+
 
         losses = {}
 
@@ -178,8 +182,8 @@ class SetCriterion(nn.Module):
 
         # match predicted bboxes
         matched_bboxes_indices = torch.argmax(giou_matrix, dim=1)
-        matched_bboxes = src_boxes[matched_bboxes_indices, ...]
-        matched_gious = giou_matrix[..., matched_bboxes_indices]
+        matched_bboxes = src_boxes[matched_bboxes_indices]
+        matched_gious = giou_matrix[range(giou_matrix.size(0)), matched_bboxes_indices]
 
         losses["loss_giou"] = 1 - torch.mean(matched_gious)
         print(f"loss_giou: {losses['loss_giou'].item():.2f}")

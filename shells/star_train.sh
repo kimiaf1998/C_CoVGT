@@ -3,7 +3,7 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
 	--dataset=STAR \
 	--mc=4 \
 	--bnum=10 \
-	--epochs=1 \
+	--epochs=30 \
 	--lr=5e-5 \
 	--qmax_words=30 \
 	--amax_words=38 \
