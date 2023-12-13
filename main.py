@@ -145,7 +145,7 @@ def main(args):
         for key in epochs_val[0].keys():
             epochs_val_avg[key] = round(np.mean([d[key] for d in epochs_val]), 2)
 
-        for metric, val in epochs_val_avg:
+        for metric, val in epochs_val_avg.items():
             plot_and_save_epochs_res(epochs, val, ylabel=metric, save_path=args.save_dir)
 
         logging.info(f"Best val models at epoch {best_epoch + 1} with m_viou {best_val_viou:.2f} and acc {val_acc:.2f}")
