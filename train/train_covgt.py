@@ -319,7 +319,7 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         losses = sum(
             loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict
         )
-        print("Total loss:", loss)
+        print("Total loss:", losses)
 
         optimizer.zero_grad()
         losses.backward()
