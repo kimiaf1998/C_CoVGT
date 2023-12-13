@@ -155,7 +155,7 @@ if __name__ == "__main__":
         # convert predicts from relative [0, 1] to absolute [0, height] coordinates
         tube_pred["pred_boxes"] = box_cxcywh_to_xyxy(tube_pred["pred_boxes"])
         results = PostProcess()(tube_pred, vid_orig_size).to(device) # 1x32x10x4
-        pred_bboxes = results[:,0,:]
+        results = results[:,0,:].unsqueeze(1)
 
         bbox_res = {}  # maps image_id to the coordinates of the detected box
         video_frame_ids = np.asarray(video_frame_ids).reshape(-1)
@@ -175,6 +175,8 @@ if __name__ == "__main__":
                             args.save_dir,
                             video_id)
         # extract actual images from the video to process them adding boxes
+
+        colors = np.random.rand(results.size(1), 3)  # 3 for RGB components
         for idx, frm_id in enumerate(video_frame_ids):
             # load extracted image
             img_path = os.path.join(
@@ -188,13 +190,15 @@ if __name__ == "__main__":
             ax.axis("off")
             ax.imshow(img, aspect="auto")
             # put other frames of the video in the directory as well not only the sampled ones
-            x1, y1, x2, y2 = pred_bboxes[idx]
-            w = x2 - x1
-            h = y2 - y1
-            rect = plt.Rectangle(
-                (x1, y1), w, h, linewidth=2, edgecolor="#FAFF00", fill=False
-            )
-            ax.add_patch(rect)
+            for i, pred_bbox in enumerate(results[idx]):
+                x1, y1, x2, y2 = pred_bbox
+                w = x2 - x1
+                h = y2 - y1
+                
+                rect = plt.Rectangle(
+                    (x1, y1), w, h, linewidth=2, edgecolor=colors[i], fill=False
+                )
+                ax.add_patch(rect)
 
             fig.set_dpi(100)
             fig.set_size_inches(imgw / 100, imgh / 100)
