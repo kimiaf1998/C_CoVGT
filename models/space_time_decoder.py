@@ -71,6 +71,7 @@ class Transformer(nn.Module):
 
         self.learn_time_embed = learn_time_embed
         self.use_time_embed = not no_time_embed
+        # self.time_embed = TimeEmbeddingLearned(video_max_len, d_model)
         # if self.use_time_embed:
         #     if learn_time_embed:
         #         self.time_embed = TimeEmbeddingLearned(video_max_len, d_model)

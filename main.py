@@ -100,7 +100,7 @@ def main(args):
     if not args.test:
         num_trainings = len(train_loader) * args.epochs
         scheduler = get_cosine_schedule_with_warmup(
-            optimizer, num_trainings // 4, num_trainings - num_trainings // 4
+            optimizer,0, num_trainings
         )
         logging.info(
             f"Set cosine schedule with {len(train_loader) * args.epochs} iterations"

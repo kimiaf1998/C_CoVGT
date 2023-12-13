@@ -55,7 +55,7 @@ def get_parser():
     parser.add_argument(
         "--n_layers",
         type=int,
-        default=2,
+        default=4,
         help="number of layers in the multi-modal transformer",
     )
     parser.add_argument(
