@@ -27,6 +27,8 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
         if not args.mc:
             model.module._compute_answer_embedding(a2v)
         for i, batch in enumerate(tqdm(data_loader, desc="Evaluating batches", unit="batch")):
+            if i == 2:
+                break
             answer_id, answer, video_o, video_f, vid_orig_size, question, question_id, seg_feats, seg_num , bboxes, bboxes_mask = (
                 batch["answer_id"],
                 batch["answer"].cuda(),
@@ -124,7 +126,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                 # tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc*numf), max_object_num, -1)
                 evaluator = STAREvaluator(targets=batch, save_pred=True)
                 bs, numc, numf, _, _ = video_o.size()
-                tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc * numf), max_object_len,
+                tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc * numf), args.num_queries,
                                                                           -1)  # (bs*t)xnum_queriesx1 -> bsxtxnum_queriesx4
                 evaluator.update(tube_pred["pred_boxes"])
                 loc_output = evaluator.summarize()
@@ -171,6 +173,8 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         AverageMeter()
     )
     for i, batch in enumerate(tqdm(train_loader, desc="Training on batches", unit="batch")):
+        if i == 2:
+            break
         answer_id, answer, video_o, video_b, video_f, question, seg_feats, seg_num, qsn_id, qsn_token_ids, qsn_seq_len, bboxes = (
             batch["answer_id"],         # answer id among a choices
             batch["answer"],            # answers (qsn + answers (choices)) token ids
@@ -256,7 +260,7 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
 
             if loc_criterion is not None:
                 bs, numc, numf, _, _ = video_o.size()
-                tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc * numf), max_object_len,
+                tube_pred["pred_boxes"] = tube_pred["pred_boxes"].reshape(bs, (numc * numf), args.num_queries,
                                                                           -1)  # (bs*t)xnum_queriesx1 -> bsxtxnum_queriesx4
                 loss_dict.update(loc_criterion(tube_pred, batch))
 
@@ -315,6 +319,7 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         losses = sum(
             loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict
         )
+        print("Total loss:", loss)
 
         optimizer.zero_grad()
         losses.backward()

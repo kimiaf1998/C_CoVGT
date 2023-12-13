@@ -11,7 +11,7 @@ from transformers import get_cosine_schedule_with_warmup
 import models.tubedetr as tube_detector
 from args import get_args
 from models.Tube_CoVGT import build_model
-from util import compute_a2v, load_model_by_key, save_to
+from util import compute_a2v, load_model_by_key, save_to, plot_and_save_epochs_res
 from dataloader.cvqa_loader import get_videoqa_loaders
 from train.train_covgt import train, eval
 from tqdm import tqdm
@@ -48,7 +48,7 @@ def main(args):
         "loss_bbox": args.bbox_loss_coef,
         "loss_giou": args.giou_loss_coef,
         "loss_sted": args.sted_loss_coef,
-        "loss_vqa": 1,
+        "loss_vqa": 5,
         "loss_cl": args.cl_loss,
         "loss_mlm": 1,
     }
@@ -116,12 +116,14 @@ def main(args):
         best_val_viou = 0
         val_acc = 0.0
         best_epoch = 0
+        epochs_val = []
         for epoch in tqdm(range(args.epochs), desc="Training on epoch", unit="epoch"):
             train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weight_dict, scheduler, epoch, args, tokenizer)
             outputs = eval(model, val_loader, a2v, args, test=False, tokenizer=tokenizer)
             val_iou = outputs["metrics"]["m_viou"]
             val_acc = outputs["metrics"]["acc"]
             results = outputs["results"]
+            epochs_val.append({"m_viou": round(val_iou,2), "acc": round(val_acc,2)})
             if val_iou > best_val_viou:
                 best_val_viou = val_iou
                 best_epoch = epoch
@@ -136,6 +138,16 @@ def main(args):
                 ep_file = os.path.join(args.save_dir, f"e{epoch}.pth")
                 torch.save(model.state_dict(), ep_file)
                 logging.info('Save to '+ep_file)
+
+        # Plotting the validation results
+        epochs = range(len(epochs_val))
+        epochs_val_avg = {}
+        for key in data[0].keys():
+            epochs_val_avg[key] = round(np.mean([d[key] for d in epochs_val]), 2)
+
+        for metric, val in epochs_val_avg:
+            plot_and_save_epochs_res(epochs, val, ylabel=metric, save_path=args.save_dir)
+
         logging.info(f"Best val models at epoch {best_epoch + 1} with m_viou {best_val_viou:.2f} and acc {val_acc:.2f}")
         print(f"Best val models at epoch {best_epoch + 1} with m_viou {best_val_viou:.2f} and acc {val_acc:.2f}")
     else:

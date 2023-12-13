@@ -411,3 +411,16 @@ def pkload(filename):
     with open(filename, 'rb') as fp:
         data = pkl.load(fp)
     return data
+
+
+def plot_and_save_epochs_res(epochs, data, ylabel, save_path=""):
+    plt.plot(epochs, data, marker='o', linestyle='-')
+    plt.title(f"{ylabel} Over Epochs")
+    plt.xlabel('Epochs')
+    plt.ylabel(ylabel)
+    plt.grid(True)
+    plt.tight_layout()
+    # Save the figure
+    plt.savefig(os.path.join(save_path, f"{ylabel}_epochs.png"))
+    print(f"Plot saved in {os.path.join(save_path, f'{ylabel}_epochs.png')}")
+    logging.info(f"Plot saved in {os.path.join(save_path, f'{ylabel}_epochs.png')}")

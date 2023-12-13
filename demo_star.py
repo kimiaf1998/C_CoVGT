@@ -194,7 +194,7 @@ if __name__ == "__main__":
                 x1, y1, x2, y2 = pred_bbox
                 w = x2 - x1
                 h = y2 - y1
-                
+
                 rect = plt.Rectangle(
                     (x1, y1), w, h, linewidth=2, edgecolor=colors[i], fill=False
                 )
