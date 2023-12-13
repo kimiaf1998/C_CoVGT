@@ -77,6 +77,7 @@ class Transformer(nn.Module):
         #         self.time_embed = TimeEmbeddingLearned(video_max_len, d_model)
         #     else:
         #         self.time_embed = TimeEmbeddingSine(video_max_len, d_model)
+        # self.time_embed = TimeEmbeddingSine(video_max_len, d_model)
         self.obj_embed = PositionalEncoding1D(d_model)
 
         self.rd_init_tsa = rd_init_tsa
@@ -119,6 +120,7 @@ class Transformer(nn.Module):
             vt_encoding=vt_encoding,  # 1x(bsize*t)xd_model
             query_mask=query_mask,  # (bsize*t)xn_queries
             vt_mask=vt_mask, # (bsizext)x1
+            # query_pos=time_pos, # n_queriesx(bsize*t)xd_model
             query_pos=obj_pos.transpose(0, 1), # n_queriesx(bsize*t)xd_model
         )  # n_layersxn_queriesx(bsize*t)xdmodel
         if self.return_weights:

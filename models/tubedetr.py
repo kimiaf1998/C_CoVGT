@@ -97,7 +97,7 @@ class TubeDecoder(nn.Module):
         bs, t, num_queries, _ = object_encoding.size()
         _, numc, _ = vt_encoding.size()
         numf = t//numc
-        # query_encoding = object_encoding.view(num_queries, bs*t, -1) # (num_queries, bs*t, dmodel)
+        query_encoding = object_encoding.view(num_queries, bs*t, -1) # (num_queries, bs*t, dmodel)
 
         vt_encoding = vt_encoding.flatten(0,1).unsqueeze(0).repeat(1, numf, 1) # (bs, numc, dmodel) -> (bs*numc, dmodel)
                                                                             # -> (1, bs*numc, dmodel)-> (1, bs*t, dmodel)
@@ -110,8 +110,8 @@ class TubeDecoder(nn.Module):
         )  # n_queriesx(BT)xF
 
         hs = self.transformer(
-            # query_encoding=query_encoding,  # (num_queries)x(BT)xF
-            query_encoding=query_embed,  # (num_queries)x(BT)xF
+            query_encoding=query_encoding,  # (num_queries)x(BT)xF
+            # query_encoding=query_embed,  # (num_queries)x(BT)xF
             vt_encoding=vt_encoding,  # (1)x(BT)xF
             query_mask=object_mask,  # num_queriesxnum_queries)
             vt_mask=vt_mask,  # (BT)x1
