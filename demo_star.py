@@ -13,7 +13,8 @@ from transformers import RobertaTokenizerFast
 from models.Tube_CoVGT import build_model
 from tools.object_align import align
 from tools.postprocess import PostProcess
-from tools.util import tokenize, load_file, transform_bb, load_model_by_key, get_mask
+from tools.util import tokenize, load_file, transform_bb, load_model_by_key
+from util import get_mask
 
 
 def get_video_info(video_name, qid):
@@ -117,11 +118,13 @@ if __name__ == "__main__":
     seq_len = torch.tensor([len(ans) for ans in ans_token_ids], dtype=torch.long).unsqueeze(0)
     ans_token_ids = ans_token_ids.unsqueeze(0).to(device)
     # inputs needs to be batch-wised
-    samples = (video_o.unsqueeze(0).to(device), video_f.unsqueeze(0).to(device))
+    video_f = video_f.unsqueeze(0).to(device)
+    video_o = video_o.unsqueeze(0).to(device)
+    samples = (video_o, video_f)
     questions = torch.tensor([0], dtype=torch.long).unsqueeze(0).to(device)
 
     answer_mask = (ans_token_ids != tokenizer.pad_token_id).float().to(device)  # RobBERETa
-    video_mask = get_mask(args.video_max_len, samples[0].size(1))
+    video_mask = get_mask(torch.tensor([video_o.size(1)]).to(device), video_o.size(1))
 
     model.eval()
     with torch.no_grad():  # forward through the models
