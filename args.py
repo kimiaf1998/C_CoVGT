@@ -156,7 +156,7 @@ def get_parser():
     parser.add_argument(
         "--lr", type=float, default=5e-5, help="initial learning rate"
     )
-    parser.add_argument("--weight_decay", type=float, default=0, help="weight decay")
+    parser.add_argument("--weight_decay", type=float, default=1e-4, help="weight decay")
     parser.add_argument(
         "--clip",
         type=float,
@@ -211,8 +211,6 @@ def get_parser():
 
     # TubeDecoder args
     # Training hyper-parameters
-    # TODO resolve conflict
-    # parser.add_argument("--weight_decay", default=1e-4, type=float)
     parser.add_argument("--lr_drop", default=10, type=int)
     parser.add_argument(
         "--epoch_chunks",

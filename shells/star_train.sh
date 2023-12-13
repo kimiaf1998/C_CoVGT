@@ -13,7 +13,7 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
 	--num_thread_reader=8 \
 	--mlm_prob=0 \
 	--cl_loss=2 \
-	--n_layers=1 \
+	--n_layers=4 \
 	--embd_dim=512 \
 	--ff_dim=1024 \
 	--dropout=0.3 \

@@ -162,12 +162,17 @@ class SetCriterion(nn.Module):
 
         # keep gt boxes within the annotated moment
         keep_indices = torch.nonzero(target_boxes_mask)
-        target_boxes = target_boxes[keep_indices[:,0], keep_indices[:,1], :, :]
-        src_boxes = src_boxes[keep_indices[:,0], keep_indices[:,1], :, :]
+        target_boxes = target_boxes[keep_indices[:,0], keep_indices[:,1]]
+        src_boxes = src_boxes[keep_indices[:,0], keep_indices[:,1]]
 
         src_boxes = src_boxes.reshape(-1, 4) # (b*t)xnum_queriesx4 => (bs*t*num_queries)x4
         src_boxes = box_ops.box_cxcywh_to_xyxy(src_boxes)
         target_boxes = target_boxes.reshape(-1, 4) # (b*t*1)x4
+
+
+        print("target_boxes:",target_boxes)
+        print("src_boxes:",src_boxes)
+
 
         losses = {}
 
