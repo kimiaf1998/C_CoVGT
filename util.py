@@ -10,6 +10,7 @@ import pandas as pd
 import logging
 import pickle as pkl
 import string
+import matplotlib.pyplot as plt
 
 def tokenize(
     seq,
