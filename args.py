@@ -263,7 +263,7 @@ def get_parser():
     )
     parser.add_argument(
         "--num_queries",
-        default=20,
+        default=10,
         type=int,
         help="Number of object query slots per image",
     )
@@ -276,9 +276,9 @@ def get_parser():
         help="standard deviation for the quantized gaussian law used for the kullback leibler divergence loss",
     )
     parser.add_argument(
-        "--no_guided_attn",
+        "--guided_attn",
         dest="guided_attn",
-        action="store_false",
+        action="store_true",
         help="whether to use the guided attention loss",
     )
     parser.add_argument(

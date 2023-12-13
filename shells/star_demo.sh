@@ -8,9 +8,9 @@ CUDA_VISIBLE_DEVICES=$GPU python demo_star.py --load=$CHECKPOINT \
 --amax_words=38 \
 --video_max_len=32 \
 --vid_id "N5PLR" \
---qid "Interaction_T1_104" \
---question "Which object was taken by the person?" \
+--qid "Sequence_T2_89" \
+--question "Which object did the person throw before they sat on the table?" \
 --answer "The clothes." \
---choices "The clothes." "The cup/glass/bottle." "The sandwich." "he book." \
+--choices "The clothes." "The cup/glass/bottle." "The broom." "he book." \
 --save_dir $OUTPUT_PATH \
 --device "cpu"

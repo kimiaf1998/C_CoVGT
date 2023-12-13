@@ -6,7 +6,7 @@ import os.path as osp
 import numpy as np
 from args import get_args, get_parser
 from PIL import Image
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 from transformers import RobertaTokenizerFast
 
@@ -14,11 +14,12 @@ from models.Tube_CoVGT import build_model
 from tools.object_align import align
 from tools.postprocess import PostProcess
 from tools.util import tokenize, load_file, transform_bb, load_model_by_key
+from tools.box_ops import box_cxcywh_to_xyxy
 from util import get_mask
 
+video_path = f'/data/kimia/hdd3_mount/kimia/data/STAR/frames_orig_fps'
 
 def get_video_info(video_name, qid):
-    video_path = f'/data/kimia/hdd3_mount/kimia/data/STAR/frames_orig_fps'
     vid_clips = load_file(os.path.join(args.dataset_dir, args.dataset) + f'/clips_val.json')[qid]
 
     video_root_dir = '/data/kimia/hdd2_mount/kimia_data/projects/data/STAR'
@@ -122,6 +123,7 @@ if __name__ == "__main__":
     video_o = video_o.unsqueeze(0).to(device)
     samples = (video_o, video_f)
     questions = torch.tensor([0], dtype=torch.long).unsqueeze(0).to(device)
+    vid_orig_size = torch.tensor(vid_orig_size).unsqueeze(0)
 
     answer_mask = (ans_token_ids != tokenizer.pad_token_id).float().to(device)  # RobBERETa
     video_mask = get_mask(torch.tensor([video_o.size(1)]).to(device), video_o.size(1))
@@ -138,74 +140,79 @@ if __name__ == "__main__":
             localization=True,
         )
 
-        # fusion_proj = fusion_proj.unsqueeze(2)
-        # predicts = torch.bmm(answer_proj, fusion_proj).squeeze()
-        #
-        # predicted = torch.max(predicts, dim=1).indices.cpu()
-        #
-        # # calculate textual answer accuracy
-        #
-        # output = {}
-        # pred_id = predicted
-        # pred = answer_choices[pred_id]
-        # output.update({'question': question_txt, 'prediction': pred, 'answer': answer_txt})
-        #
-        # # convert predicts from relative [0, 1] to absolute [0, height] coordinates
-        # results = PostProcess()(tube_pred, vid_orig_size).to(device)
-        #
-        # bbox_res = {}  # maps image_id to the coordinates of the detected box
-        # video_frame_ids = np.asarray(video_frame_ids).reshape(-1)
-        # print("result shape:", len(results))
-        # print("result shape:", video_frame_ids.shape)
-        # for frm_id, result in zip(video_frame_ids, results):
-        #     bbox_res[frm_id] = result.detach().cpu().tolist()
-        # output.update(bbox_res)
-        #
-        # # # create output dirs
-        # # if not os.path.exists(args.output_dir):
-        # #     os.makedirs(args.output_dir)
-        # # if not os.path.exists(os.path.join(args.output_dir, vid_path.split("/")[-1][:-4])):
-        # #     os.makedirs(os.path.join(args.output_dir, vid_path.split("/")[-1][:-4]))
-        # # # extract actual images from the video to process them adding boxes
-        # # os.system(
-        # #     f'ffmpeg -i {vid_path} -ss {ss} -t {t} -qscale:v 2 -r {extracted_fps} {os.path.join(args.output_dir, vid_path.split("/")[-1][:-4], "%05d.jpg")}'
-        # # )
-        # # for img_id in image_ids[0]:
-        # #     # load extracted image
-        # #     img_path = os.path.join(
-        # #         args.output_dir,
-        # #         vid_path.split("/")[-1][:-4],
-        # #         str(int(img_id) + 1).zfill(5) + ".jpg",
-        # #     )
-        # #     img = Image.open(img_path).convert("RGB")
-        # #     imgw, imgh = img.size
-        # #     fig, ax = plt.subplots()
-        # #     ax.axis("off")
-        # #     ax.imshow(img, aspect="auto")
-        # #
-        # #     if (
-        # #             pred_steds[0] <= img_id < pred_steds[1]
-        # #     ):  # add predicted box if the image_id is in the predicted start and end
-        # #         x1, y1, x2, y2 = vidstg_res[img_id]["boxes"][0]
-        # #         w = x2 - x1
-        # #         h = y2 - y1
-        # #         rect = plt.Rectangle(
-        # #             (x1, y1), w, h, linewidth=2, edgecolor="#FAFF00", fill=False
-        # #         )
-        # #         ax.add_patch(rect)
-        # #
-        # #     fig.set_dpi(100)
-        # #     fig.set_size_inches(imgw / 100, imgh / 100)
-        # #     fig.tight_layout(pad=0)
-        # #
-        # #     # save image with eventual box
-        # #     fig.savefig(
-        # #         img_path,
-        # #         format="jpg",
-        # #     )
-        # #     plt.close(fig)
-        # #
-        # # # save video with tube
-        # # os.system(
-        # #     f"ffmpeg -r {extracted_fps} -pattern_type glob -i '{os.path.join(args.output_dir, vid_path.split('/')[-1][:-4])}/*.jpg' -vf 'pad=ceil(iw/2)*2:ceil(ih/2)*2' -r {extracted_fps} -crf 25 -c:v libx264 -pix_fmt yuv420p -movflags +faststart {os.path.join(args.output_dir, vid_path.split('/')[-1])}"
-        # # )
+        fusion_proj = fusion_proj.unsqueeze(2)
+        predicts = torch.bmm(answer_proj, fusion_proj)
+
+        predicted = torch.max(predicts, dim=1).indices.cpu()
+
+        # calculate textual answer accuracy
+
+        output = {}
+        pred_id = predicted
+        pred = answer_choices[pred_id]
+        output.update({'question': question_txt, 'prediction': pred, 'answer': answer_txt})
+
+        # convert predicts from relative [0, 1] to absolute [0, height] coordinates
+        tube_pred["pred_boxes"] = box_cxcywh_to_xyxy(tube_pred["pred_boxes"])
+        results = PostProcess()(tube_pred, vid_orig_size).to(device) # 1x32x10x4
+        pred_bboxes = results[:,0,:]
+
+        bbox_res = {}  # maps image_id to the coordinates of the detected box
+        video_frame_ids = np.asarray(video_frame_ids).reshape(-1)
+
+
+        for frm_id, result in zip(video_frame_ids, results):
+            bbox_res[frm_id] = result.detach().cpu().tolist()
+        output.update(bbox_res)
+
+        # create output dirs
+        if not os.path.exists(args.save_dir):
+            os.makedirs(args.save_dir)
+        if not os.path.exists(os.path.join(args.save_dir, video_id)):
+            os.makedirs(os.path.join(args.save_dir, video_id))
+
+        video_save_path = os.path.join(
+                            args.save_dir,
+                            video_id)
+        # extract actual images from the video to process them adding boxes
+        for idx, frm_id in enumerate(video_frame_ids):
+            # load extracted image
+            img_path = os.path.join(
+                video_path,
+                video_id,
+                frm_id+".png"
+            )
+            img = Image.open(img_path).convert("RGB")
+            imgw, imgh = img.size
+            fig, ax = plt.subplots()
+            ax.axis("off")
+            ax.imshow(img, aspect="auto")
+            # put other frames of the video in the directory as well not only the sampled ones
+            x1, y1, x2, y2 = pred_bboxes[idx]
+            w = x2 - x1
+            h = y2 - y1
+            rect = plt.Rectangle(
+                (x1, y1), w, h, linewidth=2, edgecolor="#FAFF00", fill=False
+            )
+            ax.add_patch(rect)
+
+            fig.set_dpi(100)
+            fig.set_size_inches(imgw / 100, imgh / 100)
+            fig.tight_layout(pad=0)
+
+            # save image with eventual box
+            fig.savefig(
+                os.path.join(
+                    video_save_path,
+                    frm_id+".png"
+                    )
+                ,
+                format="png",
+            )
+            plt.close(fig)
+
+        for k, v in output.items():
+            if k in {"question", "answer", "prediction"}:
+                print(f"{k}: {v}")
+
+        print(f"Video saved in {video_save_path}")

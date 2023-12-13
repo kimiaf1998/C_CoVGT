@@ -23,7 +23,6 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
 	--pretrain_path=../data/save_models/nextqa/CoVGT_FTCoWV/best_model.pth\
 	--num_queries=10 \
 	--ema \
-	--no_guided_attn \
 	--no_sted \
 	--test
 
