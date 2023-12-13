@@ -8,13 +8,9 @@ import os.path as osp
 import logging
 
 from transformers import get_cosine_schedule_with_warmup
-from args import get_args
-from models.CoVGT import VGT
 import models.tubedetr as tube_detector
+from args import get_args
 from models.Tube_CoVGT import build_model
-from loss import LogSoftmax
-from models.space_time_decoder import build_transformer
-from models.tubedetr import TubeDecoder, build
 from util import compute_a2v, load_model_by_key, save_to
 from dataloader.cvqa_loader import get_videoqa_loaders
 from train.train_covgt import train, eval
@@ -130,10 +126,10 @@ def main(args):
                 best_val_viou = val_iou
                 best_epoch = epoch
                 torch.save(
-                    model.state_dict(), os.path.join(args.save_dir, f'best_model_mviou_{val_iou}.pth')
+                    model.state_dict(), os.path.join(args.save_dir, f'best_model_mviou_{val_iou}_acc_{val_acc}.pth')
                 )
-                logging.info(f"Best models have been saved in {os.path.join(args.save_dir, f'best_model_mviou_{val_iou}.pth')}")
-                print(f"Best models have been saved in {os.path.join(args.save_dir, f'best_model_mviou_{val_iou}.pth')}")
+                logging.info(f"Best models have been saved in {os.path.join(args.save_dir, f'best_model_mviou_{val_iou}_acc_{val_acc}.pth')}")
+                print(f"Best models have been saved in {os.path.join(args.save_dir, f'best_model_mviou_{val_iou}_acc_{val_acc}.pth')}")
                 save_path = osp.join(args.save_dir, 'val-res.json')
                 save_to(save_path, results)
             if args.dataset == 'webvid': 

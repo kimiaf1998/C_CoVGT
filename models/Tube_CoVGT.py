@@ -30,4 +30,4 @@ def build_model(args):
         bnum=args.bnum,
         lan=args.lan)
 
-    return model, tokenizer,
+    return model, tokenizer

@@ -543,21 +543,20 @@ class VGT(nn.Module):
         return question
     
     def get_vqa_embedding_rfcpos(self, video, language, language_lens):
+        device = video[0].device
         video_o, video_f = video[0], video[1]
         video_f = self.linear_video(video_f)
         video_f = gelu(video_f)
         video_f = self.norm_video(video_f) # (bs, numc, numf, dmodel)
-        
 
         bsize, numc, numf, numr, fdim = video_o.size()  # (bsize, n clips,n frames, n regions, feat dim)
         bsize_lan, len_lan, dim_lan = language.size()   # (bsize * n answers, seq len, hidden dim)
         ans_n = bsize_lan // bsize
-       
         X = self.encode_vid(video_o) #(bs, numc*numf, numr, dmodel)
     
         ##NTrans ###
         X = X.view(bsize, numc, numf, numr, -1).permute(0,1,3,2,4)
-        short_mask = get_mask(torch.tensor([numf]*bsize*numc*numr, dtype=torch.long), numf).cuda()
+        short_mask = get_mask(torch.tensor([numf]*bsize*numc*numr, dtype=torch.long), numf).to(device)
         # get attention on objects of different frames (Fo)
         X = self.ntrans(X.reshape(bsize*numc*numr, numf, -1), short_mask)[0]
         X = X.reshape(bsize*numc, numr, numf, -1).permute(0,2,1,3)
@@ -572,7 +571,7 @@ class VGT(nn.Module):
         A = self.gnn.build_graph(X) #(bs*numc*numf, numr, numr)
         ##ETrans################
         A = A.view(bsize*numc, numf, numr*numr)
-        graph_mask = get_mask(torch.tensor([numf]*bsize*numc, dtype=torch.long), numf).cuda()
+        graph_mask = get_mask(torch.tensor([numf]*bsize*numc, dtype=torch.long), numf).to(device)
         # get attention on object relations from adjacent frames
         A = self.etrans(x=A, attn_mask=graph_mask)[0]
         A = A.view(bsize*numc*numf, numr, numr)
@@ -662,6 +661,7 @@ class VGT(nn.Module):
         :param object_mask: [bs, T, num_queries]
         :param localization: True for tube prediction along with the answer
         """
+        device = video[0].device
         if mode == "vqa":
             answer_g, answer_w = (
                 self.get_answer_embedding(answer)
@@ -670,7 +670,7 @@ class VGT(nn.Module):
                 else self.answer_embeddings
             )
             # answer_w = self.add_segid_embedding(answer_w, seq_len, seg_feats, seg_num)
-            if len(seq_len.squeeze().shape) == 1:
+            if len(seq_len.shape) == 1:
                 question_g, question_w = self.amodel(question)
                 if question_w.shape[1] < self.Q:
                     question_w = torch.cat(
@@ -680,7 +680,7 @@ class VGT(nn.Module):
                                 question_w.shape[0],
                                 self.Q - question_w.shape[1],
                                 question_w.shape[2],
-                            ).cuda(),
+                            ).to(device),
                         ],
                         1,
                     )
@@ -689,7 +689,7 @@ class VGT(nn.Module):
                             text_mask,
                             torch.zeros(
                                 text_mask.shape[0], self.Q - text_mask.shape[1]
-                            ).cuda(),
+                            ).to(device),
                         ],
                         1,
                     )
@@ -697,7 +697,7 @@ class VGT(nn.Module):
                 # answer_seg = answer_w.mean(dim=1).view(answer_g.shape)
                 pred = self.final_proj(answer_g)
                 return pred, answer_g
-            elif len(seq_len.squeeze().shape) == 1:
+            elif len(seq_len.shape) == 1:
                 # video_proj = self.get_vqa_embedding_rfcpos(video, question_w, seq_len)
                 # qv_cat = torch.cat([question_w, video_proj], dim=1)
                 # mask = torch.cat([text_mask, video_mask], dim=1)
@@ -781,7 +781,7 @@ class VGT(nn.Module):
                         text_mask,
                         torch.zeros(
                             text_mask.shape[0], max_seq_len - text_mask.shape[1]
-                        ).cuda(),
+                        ).to(device),
                     ],
                     1,
                 )
@@ -791,7 +791,7 @@ class VGT(nn.Module):
                         -100
                         * torch.ones(labels.shape[0], max_seq_len - labels.shape[1])
                         .long()
-                        .cuda(),
+                        .to(device),
                     ],
                     1,
                 )
@@ -802,7 +802,7 @@ class VGT(nn.Module):
                         text,
                         torch.zeros(
                             text.shape[0], max_seq_len - text.shape[1], text.shape[2]
-                        ).cuda(),
+                        ).to(device),
                     ],
                     1,
                 )

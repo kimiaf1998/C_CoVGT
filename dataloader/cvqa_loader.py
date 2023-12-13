@@ -497,7 +497,7 @@ def videoqa_collate_fn(batch):
     return default_collate(batch)
 
 
-def get_videoqa_loaders(args, features, a2id, tokenizer, tvid_clipsest_mode):
+def get_videoqa_loaders(args, features, a2id, tokenizer, test_mode):
     if test_mode:
         test_dataset = VideoQADataset(
             annotation_path=args.val_annotation_path,

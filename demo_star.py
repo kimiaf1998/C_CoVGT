@@ -1,63 +1,19 @@
+import argparse
+
 import torch
 import os
 import os.path as osp
 import numpy as np
-import ffmpeg
-import argparse
-from args import get_args
+from args import get_args, get_parser
 from PIL import Image
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 from transformers import RobertaTokenizerFast
 
 from models.Tube_CoVGT import build_model
-from datasets.video_transforms import prepare, make_video_transforms
-
 from tools.object_align import align
 from tools.postprocess import PostProcess
-from tools.util import tokenize, load_file, transform_bb
-
-parser = argparse.ArgumentParser(
-    "Demo test script", parents=[get_args()]
-)
-parser.add_argument('--load', default="", type=str, help='Provide a path to the model checkpoint')
-parser.add_argument('--vid_id', default="", type=str, help='Provide a video sample id')
-parser.add_argument('--qid', default="", type=str, help='Provide a question id corresponding to the video')
-parser.add_argument('--question', default="", type=str, help='Provide a question related to the video sample')
-parser.add_argument('--answer', default="", type=str, help='Provide an answer to the provided question')
-parser.add_argument('--choices', nargs=4, type=int, help='Provide 4 answer choices as a list')
-
-args = parser.parse_args()
-device = args.device
-
-# load models
-model = build_model(args)
-model.to(device)
-print("models loaded")
-
-postprocessors = PostProcess()
-
-# load checkpoint
-assert args.load
-checkpoint = torch.load(args.load, map_location="cpu")
-
-model.load_state_dict(checkpoint["models"], strict=False)
-print("checkpoint loaded")
-
-# load video (with eventual start & end) & caption demo examples
-question_txt = args.question
-qid = args.qid
-answer_txt = args.answer
-answer_choices = args.choices
-video_id = args.video_id
-
-
-def get_video_info():
-    video_orig_size = torch.as_tensor([width, height])
-    img.close()
-    video_o, _, video_f = self.get_video_feat_star(video_id, qid, width, height)
-    video_feats = (video_o, video_f)
-    return video_feats, video_frames
+from tools.util import tokenize, load_file, transform_bb, load_model_by_key, get_mask
 
 
 def get_video_info(video_name, qid):
@@ -69,8 +25,7 @@ def get_video_info(video_name, qid):
     app_feats = []
     roi_feats, roi_bboxs = [], []
     video_frame_ids = []
-
-    fid = vid_clips[qid][0][0]
+    fid = vid_clips[0][0]
     # features indices starts from 0 while frames 1
     img = Image.open(f'{video_path}/{video_id}/{int(fid) + 1:06}.png')
     width, height = img.size
@@ -113,109 +68,141 @@ def get_video_info(video_name, qid):
     # print(bbox_feats.shape)
 
     # return bbox_feats without area
-    return (region_feats, app_feats), video_frame_ids, (width, height)
+    return region_feats, app_feats, video_frame_ids, (width, height)
 
 
-# load pre-extracted features
-video, video_frame_ids, vid_orig_size = get_video_info(video_id, qid)
+if __name__ == "__main__":
+    args = get_args()
+    device = args.device
 
-max_object_len = video[0].size(1)
+    # load models
+    model, _ = build_model(args)
+    model.to(device)
+    print("models loaded")
 
-################################################################
+    postprocessors = PostProcess()
 
+    # load checkpoint
+    assert args.load
+    model.load_state_dict(load_model_by_key(model, args.load))
+    print("checkpoint loaded")
 
-tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
-answer_txts = [question_txt + f' {tokenizer.sep_token} ' + opt for opt in answer_choices]
-ans_id = answer_choices.index(answer_txt)
-num_words = len(answer_txts)
+    # load video (with eventual start & end) & caption demo examples
+    question_txt = args.question
+    qid = args.qid
+    answer_txt = args.answer
+    answer_choices = args.choices
+    video_id = args.vid_id
 
-# fetch tokens of questions & answer
-ans_token_ids, _ = tokenize(
-    answer_txts,
-    tokenizer,
-    add_special_tokens=True,
-    max_length=num_words,
-    dynamic_padding=False,
-    truncation=True
-)
-seq_len = torch.tensor([len(ans) for ans in ans_token_ids], dtype=torch.long)
+    # load pre-extracted features
+    video_o, video_f, video_frame_ids, vid_orig_size = get_video_info(video_id, qid)
 
-with torch.no_grad():  # forward through the models
-    fusion_proj, answer_proj, tube_pred = model(
-        video,
-        answer=ans_token_ids,
-        seq_len=seq_len,
-        localization=True,
+    max_object_len = video_o.size(1)
+
+    ################################################################
+
+    tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
+    answer_txts = [question_txt + f' {tokenizer.sep_token} ' + opt for opt in answer_choices]
+    ans_id = answer_choices.index(answer_txt)
+
+    # fetch tokens of questions & answer
+    ans_token_ids, _ = tokenize(
+        answer_txts,
+        tokenizer,
+        add_special_tokens=True,
+        max_length=args.amax_words,
+        dynamic_padding=False,
+        truncation=True
     )
+    seq_len = torch.tensor([len(ans) for ans in ans_token_ids], dtype=torch.long).unsqueeze(0)
+    ans_token_ids = ans_token_ids.unsqueeze(0).to(device)
+    # inputs needs to be batch-wised
+    samples = (video_o.unsqueeze(0).to(device), video_f.unsqueeze(0).to(device))
+    questions = torch.tensor([0], dtype=torch.long).unsqueeze(0).to(device)
 
-    fusion_proj = fusion_proj.unsqueeze(2)
-    predicts = torch.bmm(answer_proj, fusion_proj).squeeze()
+    answer_mask = (ans_token_ids != tokenizer.pad_token_id).float().to(device)  # RobBERETa
+    video_mask = get_mask(args.video_max_len, samples[0].size(1))
 
-    predicted = torch.max(predicts, dim=1).indices.cpu()
+    model.eval()
+    with torch.no_grad():  # forward through the models
+        fusion_proj, answer_proj, tube_pred = model(
+            samples,
+            question=questions,
+            answer=ans_token_ids,
+            text_mask=answer_mask,
+            video_mask=video_mask,
+            seq_len=seq_len,
+            localization=True,
+        )
 
-    # calculate textual answer accuracy
-
-    output = {}
-    pred_id = predicted
-    pred = answer_choices[pred_id]
-    output.update({'question': question_txt, 'prediction': pred, 'answer': answer_txt})
-
-    # convert predicts from relative [0, 1] to absolute [0, height] coordinates
-    results = PostProcess()(tube_pred, vid_orig_size).to(device)
-
-    bbox_res = {}  # maps image_id to the coordinates of the detected box
-    video_frame_ids = np.asarray(video_frame_ids).reshape(-1)
-    print("result shape:", len(results))
-    print("result shape:", video_frame_ids.shape)
-    for frm_id, result in zip(video_frame_ids, results):
-        bbox_res[frm_id] = result.detach().cpu().tolist()
-    output.update(bbox_res)
-
-    # # create output dirs
-    # if not os.path.exists(args.output_dir):
-    #     os.makedirs(args.output_dir)
-    # if not os.path.exists(os.path.join(args.output_dir, vid_path.split("/")[-1][:-4])):
-    #     os.makedirs(os.path.join(args.output_dir, vid_path.split("/")[-1][:-4]))
-    # # extract actual images from the video to process them adding boxes
-    # os.system(
-    #     f'ffmpeg -i {vid_path} -ss {ss} -t {t} -qscale:v 2 -r {extracted_fps} {os.path.join(args.output_dir, vid_path.split("/")[-1][:-4], "%05d.jpg")}'
-    # )
-    # for img_id in image_ids[0]:
-    #     # load extracted image
-    #     img_path = os.path.join(
-    #         args.output_dir,
-    #         vid_path.split("/")[-1][:-4],
-    #         str(int(img_id) + 1).zfill(5) + ".jpg",
-    #     )
-    #     img = Image.open(img_path).convert("RGB")
-    #     imgw, imgh = img.size
-    #     fig, ax = plt.subplots()
-    #     ax.axis("off")
-    #     ax.imshow(img, aspect="auto")
-    #
-    #     if (
-    #             pred_steds[0] <= img_id < pred_steds[1]
-    #     ):  # add predicted box if the image_id is in the predicted start and end
-    #         x1, y1, x2, y2 = vidstg_res[img_id]["boxes"][0]
-    #         w = x2 - x1
-    #         h = y2 - y1
-    #         rect = plt.Rectangle(
-    #             (x1, y1), w, h, linewidth=2, edgecolor="#FAFF00", fill=False
-    #         )
-    #         ax.add_patch(rect)
-    #
-    #     fig.set_dpi(100)
-    #     fig.set_size_inches(imgw / 100, imgh / 100)
-    #     fig.tight_layout(pad=0)
-    #
-    #     # save image with eventual box
-    #     fig.savefig(
-    #         img_path,
-    #         format="jpg",
-    #     )
-    #     plt.close(fig)
-    #
-    # # save video with tube
-    # os.system(
-    #     f"ffmpeg -r {extracted_fps} -pattern_type glob -i '{os.path.join(args.output_dir, vid_path.split('/')[-1][:-4])}/*.jpg' -vf 'pad=ceil(iw/2)*2:ceil(ih/2)*2' -r {extracted_fps} -crf 25 -c:v libx264 -pix_fmt yuv420p -movflags +faststart {os.path.join(args.output_dir, vid_path.split('/')[-1])}"
-    # )
+        # fusion_proj = fusion_proj.unsqueeze(2)
+        # predicts = torch.bmm(answer_proj, fusion_proj).squeeze()
+        #
+        # predicted = torch.max(predicts, dim=1).indices.cpu()
+        #
+        # # calculate textual answer accuracy
+        #
+        # output = {}
+        # pred_id = predicted
+        # pred = answer_choices[pred_id]
+        # output.update({'question': question_txt, 'prediction': pred, 'answer': answer_txt})
+        #
+        # # convert predicts from relative [0, 1] to absolute [0, height] coordinates
+        # results = PostProcess()(tube_pred, vid_orig_size).to(device)
+        #
+        # bbox_res = {}  # maps image_id to the coordinates of the detected box
+        # video_frame_ids = np.asarray(video_frame_ids).reshape(-1)
+        # print("result shape:", len(results))
+        # print("result shape:", video_frame_ids.shape)
+        # for frm_id, result in zip(video_frame_ids, results):
+        #     bbox_res[frm_id] = result.detach().cpu().tolist()
+        # output.update(bbox_res)
+        #
+        # # # create output dirs
+        # # if not os.path.exists(args.output_dir):
+        # #     os.makedirs(args.output_dir)
+        # # if not os.path.exists(os.path.join(args.output_dir, vid_path.split("/")[-1][:-4])):
+        # #     os.makedirs(os.path.join(args.output_dir, vid_path.split("/")[-1][:-4]))
+        # # # extract actual images from the video to process them adding boxes
+        # # os.system(
+        # #     f'ffmpeg -i {vid_path} -ss {ss} -t {t} -qscale:v 2 -r {extracted_fps} {os.path.join(args.output_dir, vid_path.split("/")[-1][:-4], "%05d.jpg")}'
+        # # )
+        # # for img_id in image_ids[0]:
+        # #     # load extracted image
+        # #     img_path = os.path.join(
+        # #         args.output_dir,
+        # #         vid_path.split("/")[-1][:-4],
+        # #         str(int(img_id) + 1).zfill(5) + ".jpg",
+        # #     )
+        # #     img = Image.open(img_path).convert("RGB")
+        # #     imgw, imgh = img.size
+        # #     fig, ax = plt.subplots()
+        # #     ax.axis("off")
+        # #     ax.imshow(img, aspect="auto")
+        # #
+        # #     if (
+        # #             pred_steds[0] <= img_id < pred_steds[1]
+        # #     ):  # add predicted box if the image_id is in the predicted start and end
+        # #         x1, y1, x2, y2 = vidstg_res[img_id]["boxes"][0]
+        # #         w = x2 - x1
+        # #         h = y2 - y1
+        # #         rect = plt.Rectangle(
+        # #             (x1, y1), w, h, linewidth=2, edgecolor="#FAFF00", fill=False
+        # #         )
+        # #         ax.add_patch(rect)
+        # #
+        # #     fig.set_dpi(100)
+        # #     fig.set_size_inches(imgw / 100, imgh / 100)
+        # #     fig.tight_layout(pad=0)
+        # #
+        # #     # save image with eventual box
+        # #     fig.savefig(
+        # #         img_path,
+        # #         format="jpg",
+        # #     )
+        # #     plt.close(fig)
+        # #
+        # # # save video with tube
+        # # os.system(
+        # #     f"ffmpeg -r {extracted_fps} -pattern_type glob -i '{os.path.join(args.output_dir, vid_path.split('/')[-1][:-4])}/*.jpg' -vf 'pad=ceil(iw/2)*2:ceil(ih/2)*2' -r {extracted_fps} -crf 25 -c:v libx264 -pix_fmt yuv420p -movflags +faststart {os.path.join(args.output_dir, vid_path.split('/')[-1])}"
+        # # )

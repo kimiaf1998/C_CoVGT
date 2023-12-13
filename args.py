@@ -9,7 +9,8 @@ from global_parameters import (
     dataset2folder,
 )
 
-def get_args():
+
+def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dataset",
@@ -179,10 +180,6 @@ def get_args():
     parser.add_argument("--min_words", type=int, default=10)
 
     # Demo parameters
-    parser.add_argument(
-        "--question_example", type=str, default="", help="demo question text"
-    )
-    parser.add_argument("--video_example", type=str, default="", help="demo video path")
     parser.add_argument("--port", type=int, default=8899, help="demo port")
     parser.add_argument(
         "--pretrain_path2", type=str, default="", help="second demo models"
@@ -191,7 +188,7 @@ def get_args():
         "--save_dir", type=str, default="./save_models/", help="path to save dir"
     )
     parser.add_argument(
-        "--mc", type=int, default=5, help="number of multiple choices"
+        "--mc", type=int, default=4, help="number of multiple choices"
     )
     parser.add_argument(
         "--bnum", type=int, default=10, help="number of region proposal"
@@ -202,7 +199,15 @@ def get_args():
     parser.add_argument(
         "--lan", type=str, default='RoBERTa', help="BERT or RoBERTa"
     )
-
+    parser.add_argument('--load', default="", type=str, help='Provide a path to the model checkpoint')
+    parser.add_argument('--vid_id', default="", type=str, help='Provide a video sample id')
+    parser.add_argument('--qid', default="", type=str, help='Provide a question id corresponding to the video')
+    parser.add_argument('--question', default="", type=str, help='Provide a question related to the video sample')
+    parser.add_argument('--answer', default="", type=str, help='Provide an answer to the provided question')
+    parser.add_argument('--choices', nargs=4, type=str, help='Provide 4 answer choices as a list')
+    parser.add_argument(
+        "--device", default="cuda", help="device to use for training / testing"
+    )
 
     # TubeDecoder args
     # Training hyper-parameters
@@ -289,7 +294,6 @@ def get_args():
     parser.add_argument("--sted_loss_coef", default=10, type=float)
     parser.add_argument("--guided_attn_loss_coef", default=1, type=float)
 
-
     # Baselines
     parser.add_argument(
         "--learn_time_embed",
@@ -307,13 +311,17 @@ def get_args():
         help="whether to randomly initialize the temporal self-attention in the decoder",
     )
 
+    return parser
 
+
+def get_args():
+    parser = get_parser()
     args = parser.parse_args()
 
     os.environ["TRANSFORMERS_CACHE"] = args.bert_path
     # args.save_dir = './save_dir/'
-    
-    #args.save_dir = os.path.join(args.checkpoint_predir, args.checkpoint_dir)
+
+    # args.save_dir = os.path.join(args.checkpoint_predir, args.checkpoint_dir)
 
     # multiple-choice arg
     # args.mc = 4 if args.dataset == "how2qa" else 0
@@ -329,7 +337,7 @@ def get_args():
     args.load_path = load_path
 
     if args.dataset not in ["howto100m", "howtovqa"]:  # VideoQA dataset
-        args.features_path = f'../data/{args.dataset}/' #os.path.join(load_path, "s3d.pth")
+        args.features_path = f'../data/{args.dataset}/'  # os.path.join(load_path, "s3d.pth")
         # args.features_path = f'/data/datasets/{args.dataset}/'
         if args.dataset == 'tgifqa':
             args.train_annotation_path = os.path.join(load_path, "train.csv")
