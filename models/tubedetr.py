@@ -169,11 +169,6 @@ class SetCriterion(nn.Module):
         src_boxes = box_ops.box_cxcywh_to_xyxy(src_boxes)
         target_boxes = target_boxes.reshape(-1, 4) # (b*t*1)x4
 
-
-        print("target_boxes:",target_boxes)
-        print("src_boxes:",src_boxes)
-
-
         losses = {}
 
         giou_matrix = generalized_box_iou(

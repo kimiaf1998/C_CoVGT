@@ -261,7 +261,7 @@ def get_parser():
     )
     parser.add_argument(
         "--num_queries",
-        default=10,
+        default=1,
         type=int,
         help="Number of object query slots per image",
     )
