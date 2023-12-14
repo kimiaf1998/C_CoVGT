@@ -594,7 +594,8 @@ def main():
         if row["question_id"].startswith("Interaction_T1"):
             result["bboxes"] = get_bboxes_Interaction_T1(row)
         elif row["question_id"].startswith("Interaction_T2"):
-            result["bboxes"] = get_bboxes_Interaction_T2(row)
+            # the answer is the format "[Verb]ed." We're ignoring these.
+            continue
         elif row["question_id"].startswith("Interaction_T3"):
             result["bboxes"] = get_bboxes_Interaction_T3(row)
         elif row["question_id"].startswith("Interaction_T4"):
@@ -614,7 +615,8 @@ def main():
         elif row["question_id"].startswith("Prediction_T1"):
             result["bboxes"] = get_bboxes_Prediction_T1(row)
         elif row["question_id"].startswith("Prediction_T2"):
-            result["bboxes"] = get_bboxes_Prediction_T2(row)
+            # the answer is the format "[Verb]ed." We're ignoring these.
+            continue
         elif row["question_id"].startswith("Prediction_T3"):
             result["bboxes"] = get_bboxes_Prediction_T3(row)
         elif row["question_id"].startswith("Prediction_T4"):
@@ -632,6 +634,10 @@ def main():
         elif row["question_id"].startswith("Feasibility_T6"):
             result["bboxes"] = get_bboxes_Feasibility_T6(row)
         results.append(result)
+
+    # Report number of samples
+    print(f"Total number of samples: {len(df)}")
+    print(f"Total number of samples written: {len(results)}")
 
     # Write the results to a JSON file
     with open(OUTPUT_FILE_PATH, 'w') as json_file:
