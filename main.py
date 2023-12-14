@@ -20,15 +20,33 @@ from tqdm import tqdm
 def main(args):
     if not (os.path.isdir(args.save_dir)):
         os.mkdir(os.path.join(args.save_dir))
+
+    log_path = os.path.join(args.save_dir, "stdout.log")
+    if os.path.exists(log_path):
+        try:
+            os.remove(log_path)
+            print(f"Existing '{log_path}' has been removed.")
+        except OSError as e:
+            print(f"Error: {e}")
+
+    # Configure the root logger
     logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s %(levelname)-8s %(message)s"
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(message)s",
+        filename=os.path.join(args.save_dir, "stdout.log"),
+        filemode="a"  # Use "a" for append mode
     )
-    logFormatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
-    rootLogger = logging.getLogger()
-    fileHandler = logging.FileHandler(os.path.join(args.save_dir, "stdout.log"), "w+")
-    fileHandler.setFormatter(logFormatter)
-    rootLogger.addHandler(fileHandler)
-    logging.info(args)
+
+    # Create a logger instance
+    logger = logging.getLogger("MAIN")
+    logger.setLevel(logging.INFO)
+    main_handler_logger = logging.FileHandler(log_path, encoding="utf-8")
+    main_handler_logger.setFormatter(
+        logging.Formatter("%(asctime)s - %(name)s - %(message)s")
+    )
+    logger.addHandler(main_handler_logger)
+
+    logger.info(args)
 
     # Model
     model, tokenizer = build_model(args)
