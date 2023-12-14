@@ -27,6 +27,8 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
         if not args.mc:
             model.module._compute_answer_embedding(a2v)
         for i, batch in enumerate(tqdm(data_loader, desc="Evaluating batches", unit="batch")):
+            if i == 2:
+                break
             answer_id, answer, video_o, video_f, vid_orig_size, question, question_id, seg_feats, seg_num , bboxes, bboxes_mask = (
                 batch["answer_id"],
                 batch["answer"].cuda(),
@@ -171,8 +173,8 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         AverageMeter()
     )
     for i, batch in enumerate(tqdm(train_loader, desc="Training on batches", unit="batch")):
-        # if i == 2:
-        #     break
+        if i == 2:
+            break
         answer_id, answer, video_o, video_b, video_f, question, seg_feats, seg_num, qsn_id, qsn_token_ids, qsn_seq_len, bboxes = (
             batch["answer_id"],         # answer id among a choices
             batch["answer"],            # answers (qsn + answers (choices)) token ids
@@ -361,8 +363,8 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
 
     # return avg losses over the batch
     return {
-        "giou_loss:": running_giou_loss.avg,
-        "box_loss:": running_bbox_loss.avg,
-        "vqa_loss:": running_vqa_loss.avg,
+        "giou_loss": running_giou_loss.avg,
+        "box_loss": running_bbox_loss.avg,
+        "vqa_loss": running_vqa_loss.avg,
     }
 

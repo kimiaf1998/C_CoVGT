@@ -342,8 +342,8 @@ def group(csv_data, gt=True):
     return ans_group, qsn_group
 
 
-def load_model_by_key(cur_model, model_path):
-    model_dict = torch.load(model_path)
+def load_model_by_key(cur_model, model_path, device):
+    model_dict = torch.load(model_path, map_location=torch.device(device))
     new_model_dict = {}
     for k, v in cur_model.state_dict().items():
         if k in model_dict:

@@ -119,7 +119,7 @@ class STAREvaluator(object):
         self.results, mapped_predictions = self.evaluator.evaluate(
             self.predictions
         )
-        categories = set('_'.join(x.split("_")[1:3]) for x in self.results.keys())
+        categories = set(x.split("_")[1] for x in self.results.keys())
         print("categories:", categories)
         metrics = {}
         counter = {}
@@ -130,7 +130,7 @@ class STAREvaluator(object):
                 metrics[category].update({f"viou@{thresh}" : 0})
             counter.update({category : 0})
         for question_id, x in self.results.items():  # sum results
-            question_cat = '_'.join(question_id.split("_")[1:3])
+            question_cat = question_id.split("_")[1]
             metrics[question_cat]["viou"] += x["viou"]
             for thresh in self.iou_thresholds:
                 metrics[question_cat][f"viou@{thresh}"] += x[f"viou@{thresh}"]

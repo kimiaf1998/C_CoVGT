@@ -19,7 +19,7 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
 	--dropout=0.3 \
 	--seed=666 \
 	--lan="RoBERTa" \
-	--save_dir='../data/save_models/STAR/CoVGT/' \
+	--save_dir='../data/save_models/STAR/CoVGT/test' \
 	--pretrain_path=../data/save_models/nextqa/CoVGT_FTCoWV/best_model.pth\
 	--num_queries=1 \
 	--ema \

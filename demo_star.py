@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
     # load checkpoint
     assert args.load
-    model.load_state_dict(load_model_by_key(model, args.load))
+    model.load_state_dict(load_model_by_key(model, args.load, device))
     print("checkpoint loaded")
 
     # load video (with eventual start & end) & caption demo examples

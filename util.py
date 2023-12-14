@@ -425,3 +425,4 @@ def plot_and_save_epochs_res(epochs, data, ylabel, save_path=""):
     plt.savefig(os.path.join(save_path, f"{ylabel}_epochs.png"))
     print(f"Plot saved in {os.path.join(save_path, f'{ylabel}_epochs.png')}")
     logging.info(f"Plot saved in {os.path.join(save_path, f'{ylabel}_epochs.png')}")
+    plt.close()
