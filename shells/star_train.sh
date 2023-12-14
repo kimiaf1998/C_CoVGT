@@ -3,7 +3,7 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
 	--dataset=STAR \
 	--mc=4 \
 	--bnum=10 \
-	--epochs=10 \
+	--epochs=1 \
 	--lr=5e-5 \
 	--qmax_words=30 \
 	--amax_words=38 \
@@ -21,7 +21,7 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
 	--lan="RoBERTa" \
 	--save_dir='../data/save_models/STAR/CoVGT/time_embd' \
 	--pretrain_path=../data/save_models/nextqa/CoVGT_FTCoWV/best_model.pth\
-	--num_queries=1 \
+	--num_queries=10 \
 	--no_sted \
 
 	

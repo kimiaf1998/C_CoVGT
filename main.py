@@ -131,10 +131,10 @@ def main(args):
                 best_val_viou = val_iou
                 best_epoch = epoch
                 torch.save(
-                    model.state_dict(), os.path.join(args.save_dir, f'best_model_mviou_{val_iou:.2f}_acc_{val_acc:.2f}.pth')
+                    model.state_dict(), os.path.join(args.save_dir, f'best_model_mviou_{val_iou*100:.2f}_acc_{val_acc*100:.2f}.pth')
                 )
-                logging.info(f"Best models have been saved in {os.path.join(args.save_dir, f'best_model_mviou_{val_iou:.2f}_acc_{val_acc:.2f}.pth')}")
-                print(f"Best models have been saved in {os.path.join(args.save_dir, f'best_model_mviou_{val_iou:.2f}_acc_{val_acc:.2f}.pth')}")
+                logging.info(f"Best models have been saved in {os.path.join(args.save_dir, f'best_model_mviou_{val_iou*100:.2f}_acc_{val_acc*100:.2f}.pth')}")
+                print(f"Best models have been saved in {os.path.join(args.save_dir, f'best_model_mviou_{val_iou*100:.2f}_acc_{val_acc*100:.2f}.pth')}")
                 save_path = osp.join(args.save_dir, 'val-res.json')
                 save_to(save_path, results)
             if args.dataset == 'webvid': 
@@ -144,16 +144,20 @@ def main(args):
 
         # Fetch validation and loss results
         epochs = range(len(epochs_val))
-        epochs_val_items = {"m_viou": [], "acc": []}
+        epochs_val_items = {}
         epochs_loss_items = {}
         for key in epochs_val[0].keys():
-            epochs_val_items[key] = [d[key] for d in epochs_val]
-
-        for epoch in args.epochs:
-            for val_key in epochs_val.keys():
-                epochs_val_items[val_key].append(epochs_val[epoch][val_key])
-            for loss_key in epochs_loss.keys():
-                epochs_loss_items[loss_key].append(epochs_loss[epoch][loss_key])
+            epochs_val_items.update({key: [d[key] for d in epochs_val]})
+        print(epochs_loss)
+        print(epochs_loss[0])
+        for key in epochs_loss[0].keys():
+            epochs_loss_items.update({key: [d[key] for d in epochs_loss]})
+        #
+        # for epoch in range(args.epochs):
+        #     for val_key in epochs_val.keys():
+        #         epochs_val_items[val_key].append(epochs_val[epoch][val_key])
+        #     for loss_key in epochs_loss.keys():
+        #         epochs_loss_items[loss_key].append(epochs_loss[epoch][loss_key])
 
         # Plot validation and loss results
         for metric, val in epochs_val_items.items():
@@ -161,8 +165,8 @@ def main(args):
         for metric, loss in epochs_loss_items.items():
             plot_and_save_epochs_res(epochs, loss, ylabel=metric, save_path=args.save_dir)
 
-        logging.info(f"Best val models at epoch {best_epoch + 1} with m_viou {best_val_viou:.2f} and acc {val_acc:.2f}")
-        print(f"Best val models at epoch {best_epoch + 1} with m_viou {best_val_viou:.2f} and acc {val_acc:.2f}")
+        logging.info(f"Best val models at epoch {best_epoch + 1} with m_viou {best_val_viou*100:.2f} and acc {val_acc*100:.2f}")
+        print(f"Best val models at epoch {best_epoch + 1} with m_viou {best_val_viou*100:.2f} and acc {val_acc*100:.2f}")
     else:
         # Evaluate on val (=test) set
         outputs = eval(model, test_loader, a2v, args, test=False, tokenizer=tokenizer)  # zero-shot VideoQA
