@@ -554,6 +554,8 @@ def update_frame_numbers_using_new_framerate(row, new_fps=3):
     # When multiple frames from the original framerate are mapped to the same frame 
     # using 3fps (e.g. frame 245, 244 at 30fps are both mapped to frame 24 at 3fps),
     # take the average of the bounding boxes
+    # Note: TODO better to take the frame closest to the target frame number (i.e.
+    # the latest frame) than to take an average.
     new_frame_number_to_avg_bbox = {}
     for frame_number, bboxes in new_frame_number_to_bboxes.items():
         num_bboxes = len(bboxes)
@@ -630,8 +632,6 @@ def main():
         elif row["question_id"].startswith("Feasibility_T6"):
             result["bboxes"] = get_bboxes_Feasibility_T6(row)
         results.append(result)
-
-        update_frame_numbers_using_new_framerate(result, new_fps=3)
 
     # Write the results to a JSON file
     with open(OUTPUT_FILE_PATH, 'w') as json_file:
