@@ -13,7 +13,7 @@ import json
 # Path of the STAR dataset file you want to convert
 INPUT_FILE_PATH = './data/star/STAR_train.json'
 # File path to write output to
-OUTPUT_FILE_PATH = "./C_CoVGT/datasets/star/train_updated_frame_number.json"
+OUTPUT_FILE_PATH = "./C_CoVGT/datasets/star/STAR_train_reformatted.json"
 ########################################################################
 
 OBJECT_CLASS_LOOKUP={}
