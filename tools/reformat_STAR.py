@@ -176,7 +176,7 @@ def get_bboxes_Interaction_T2(row):
     """
     pattern = re.compile(fr'What did the person do with the ({OBJECT_REGEX_PATTERN})?')
     object = pattern.match(row["question"]).group(1)
-    return get_bboxes_of_action(object, row["situations"], row["question_id"], row["video_id"])
+    return get_bboxes_of_object(object, row["situations"], row["question_id"])
 
 def get_bboxes_Interaction_T3(row):
     """
@@ -195,7 +195,7 @@ def get_bboxes_Interaction_T3(row):
     """
     pattern = re.compile(fr'{VERB_REGEX}? the ({OBJECT_REGEX_PATTERN})\.')
     object = pattern.match(row["answer"]).group(1)
-    return get_bboxes_of_action(object, row["situations"], row["question_id"], row["video_id"])
+    return get_bboxes_of_object(object, row["situations"], row["question_id"])
 
 def get_bboxes_Interaction_T4(row):
     """
@@ -214,7 +214,7 @@ def get_bboxes_Interaction_T4(row):
     """
     pattern = re.compile(fr'{VERB_REGEX}? the ({OBJECT_REGEX_PATTERN})\.')
     object = pattern.match(row["answer"]).group(1)
-    return get_bboxes_of_action(object, row["situations"], row["question_id"], row["video_id"])
+    return get_bboxes_of_object(object, row["situations"], row["question_id"])
 
 def get_bboxes_Sequence_T1(row):
     """
@@ -271,7 +271,7 @@ def get_bboxes_Sequence_T3(row):
     """
     pattern = re.compile(fr'{VERB_REGEX}? the ({OBJECT_REGEX_PATTERN})\.')
     object_2 = pattern.match(row["answer"]).group(1)
-    return get_bboxes_of_action(object_2, row["situations"], row["question_id"], row["video_id"])
+    return get_bboxes_of_object(object_2, row["situations"], row["question_id"])
 
 def get_bboxes_Sequence_T4(row):
     """
@@ -290,7 +290,7 @@ def get_bboxes_Sequence_T4(row):
     """
     pattern = re.compile(fr'{VERB_REGEX}? the ({OBJECT_REGEX_PATTERN})\.')
     object_2 = pattern.match(row["answer"]).group(1)
-    return get_bboxes_of_action(object_2, row["situations"], row["question_id"], row["video_id"])
+    return get_bboxes_of_object(object_2, row["situations"], row["question_id"])
 
 def get_bboxes_Sequence_T5(row):
     """
@@ -309,7 +309,7 @@ def get_bboxes_Sequence_T5(row):
     """
     pattern = re.compile(fr'What did the person do to the ({OBJECT_REGEX_PATTERN})? after {VERB_REGEX}? the {OBJECT_REGEX_PATTERN}?\?')
     object_2 = pattern.match(row["question"]).group(1)
-    return get_bboxes_of_action(object_2, row["situations"], row["question_id"], row["video_id"])
+    return get_bboxes_of_object(object_2, row["situations"], row["question_id"])
 
 def get_bboxes_Sequence_T6(row):
     """
@@ -328,7 +328,7 @@ def get_bboxes_Sequence_T6(row):
     """
     pattern = re.compile(fr'What did the person do to the ({OBJECT_REGEX_PATTERN})? before {VERB_REGEX}? the {OBJECT_REGEX_PATTERN}?\?')
     object_2 = pattern.match(row["question"]).group(1)
-    return get_bboxes_of_action(object_2, row["situations"], row["question_id"], row["video_id"])
+    return get_bboxes_of_object(object_2, row["situations"], row["question_id"])
 
 def get_bboxes_Prediction_T1(row):
     """
@@ -347,7 +347,7 @@ def get_bboxes_Prediction_T1(row):
     """
     pattern = re.compile(fr'{VERB_REGEX}? the ({OBJECT_REGEX_PATTERN})\.')
     object = pattern.match(row["answer"]).group(1)
-    return get_bboxes_of_action(object, row["situations"], row["question_id"], row["video_id"])
+    return get_bboxes_of_object(object, row["situations"], row["question_id"])
 
 def get_bboxes_Prediction_T2(row):
     """
@@ -366,7 +366,7 @@ def get_bboxes_Prediction_T2(row):
     """
     pattern = re.compile(fr'What will the person do next with the ({OBJECT_REGEX_PATTERN})\?')
     object = pattern.match(row["question"]).group(1)
-    return get_bboxes_of_action(object, row["situations"], row["question_id"], row["video_id"])
+    return get_bboxes_of_object(object, row["situations"], row["question_id"])
 
 def get_bboxes_Prediction_T3(row):
     """
@@ -442,7 +442,7 @@ def get_bboxes_Feasibility_T2(row):
     """
     pattern = re.compile(fr'{VERB_REGEX}? the ({OBJECT_REGEX_PATTERN})\.')
     object = pattern.match(row["answer"]).group(1)
-    return get_bboxes_of_action(object, row["situations"], row["question_id"], row["video_id"])
+    return get_bboxes_of_object(object, row["situations"], row["question_id"])
 
 def get_bboxes_Feasibility_T3(row):
     """
@@ -480,7 +480,7 @@ def get_bboxes_Feasibility_T4(row):
     """
     pattern = re.compile(fr'{VERB_REGEX}? the ({OBJECT_REGEX_PATTERN})\.')
     object = pattern.match(row["answer"]).group(1)
-    return get_bboxes_of_action(object, row["situations"], row["question_id"], row["video_id"])
+    return get_bboxes_of_object(object, row["situations"], row["question_id"])
 
 def get_bboxes_Feasibility_T5(row):
     """
@@ -518,7 +518,7 @@ def get_bboxes_Feasibility_T6(row):
     """
     pattern = re.compile(fr'{VERB_REGEX}? the ({OBJECT_REGEX_PATTERN})\.')
     object = pattern.match(row["answer"]).group(1)
-    return get_bboxes_of_action(object, row["situations"], row["question_id"], row["video_id"])
+    return get_bboxes_of_object(object, row["situations"], row["question_id"])
 
 def update_frame_numbers_using_new_framerate(row, new_fps=3):
     """
@@ -615,7 +615,7 @@ def main():
         elif row["question_id"].startswith("Prediction_T1"):
             result["bboxes"] = get_bboxes_Prediction_T1(row)
         elif row["question_id"].startswith("Prediction_T2"):
-            # the answer is the format "[Verb]ed." We're ignoring these.
+            # the answer is the format "[Verb]." We're ignoring these.
             continue
         elif row["question_id"].startswith("Prediction_T3"):
             result["bboxes"] = get_bboxes_Prediction_T3(row)
