@@ -166,8 +166,7 @@ def main(args):
         epochs_loss_items = {}
         for key in epochs_val[0].keys():
             epochs_val_items.update({key: [d[key] for d in epochs_val]})
-        print(epochs_loss)
-        print(epochs_loss[0])
+
         for key in epochs_loss[0].keys():
             epochs_loss_items.update({key: [d[key] for d in epochs_loss]})
         #

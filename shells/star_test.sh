@@ -1,5 +1,5 @@
 GPU=$1
-CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
+CUDA_VISIBLE_DEVICES=$GPU python main.py --load=$CHECKPOINT --checkpoint_dir=STAR \
 	--dataset=STAR \
 	--mc=4 \
 	--bnum=10 \
@@ -21,8 +21,7 @@ CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
 	--lan="RoBERTa" \
 	--save_dir='../data/save_models/STAR/CoVGT/test' \
 	--pretrain_path=../data/save_models/nextqa/CoVGT_FTCoWV/best_model.pth\
-	--num_queries=1 \
-	--ema \
+	--num_queries=10 \
 	--no_sted \
 	--test
 

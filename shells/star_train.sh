@@ -1,4 +1,6 @@
 GPU=$1
+CHECKPOINT="../data/save_models/STAR/CoVGT/Final_Res/best_model_mviou_13.79_acc_44.90.pth"
+
 CUDA_VISIBLE_DEVICES=$GPU python main.py --checkpoint_dir=STAR \
 	--dataset=STAR \
 	--mc=4 \

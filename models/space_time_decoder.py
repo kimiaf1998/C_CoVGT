@@ -149,6 +149,10 @@ class TransformerDecoder(nn.Module):
         self.return_intermediate = return_intermediate
         self.return_weights = return_weights
 
+
+    def with_pos_embed(self, tensor, pos: Optional[Tensor]):
+        return tensor if pos is None else tensor + pos
+
     def forward(
         self,
         query_encoding,
@@ -157,7 +161,7 @@ class TransformerDecoder(nn.Module):
         vt_mask: Optional[Tensor] = None,
         query_pos: Optional[Tensor] = None,
     ):
-        output = query_encoding
+        output = self.with_pos_embed(query_encoding, query_pos)
 
         intermediate = []
         intermediate_weights = []
@@ -169,7 +173,6 @@ class TransformerDecoder(nn.Module):
                 vt_encoding,
                 query_mask=query_mask,
                 vt_mask=vt_mask,
-                query_pos=query_pos
             )
             if self.return_intermediate:
                 intermediate.append(self.norm(output))
@@ -243,7 +246,8 @@ class TransformerDecoderLayer(nn.Module):
         query_pos: Optional[Tensor] = None,
     ):
 
-        q = self.with_pos_embed(query, query_pos)
+        # q = self.with_pos_embed(query, query_pos)
+        q = query
         k = v = query
         # Temporal Self attention
         tgt2, weights = self.self_attn(
@@ -262,12 +266,13 @@ class TransformerDecoderLayer(nn.Module):
         tgt_cross = (
             tgt.reshape(bs, -1, f).transpose(0, 1)
         )  # bxtxf -> (b*t)x1xf -> 1x(b*t)xf
-        query_pos_cross = (
-            query_pos.reshape(bs, -1, f).transpose(0, 1)
-        )  # bxtxf -> (b*t)x1xf -> 1x(b*t)xf
+        # query_pos_cross = (
+        #     query_pos.reshape(bs, -1, f).transpose(0, 1)
+        # )  # bxtxf -> (b*t)x1xf -> 1x(b*t)xf
 
         tgt2, cross_weights = self.cross_attn_image(
-            query=self.with_pos_embed(tgt_cross, query_pos_cross),
+            # query=self.with_pos_embed(tgt_cross, query_pos_cross),
+            query=tgt_cross,
             key=vt_encoding,
             value=vt_encoding,
             # key_padding_mask=vt_mask, # TODO expecting key_padding_mask shape of (2048, 1), but got torch.Size([64, 8])

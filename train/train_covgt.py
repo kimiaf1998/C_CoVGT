@@ -173,7 +173,7 @@ def train(model, train_loader, a2v, optimizer, qa_criterion, loc_criterion, weig
         AverageMeter()
     )
     for i, batch in enumerate(tqdm(train_loader, desc="Training on batches", unit="batch")):
-        if i == 2:
+        if i == 10:
             break
         answer_id, answer, video_o, video_b, video_f, question, seg_feats, seg_num, qsn_id, qsn_token_ids, qsn_seq_len, bboxes = (
             batch["answer_id"],         # answer id among a choices
