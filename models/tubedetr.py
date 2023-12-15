@@ -110,8 +110,8 @@ class TubeDecoder(nn.Module):
         )  # n_queriesx(BT)xF
 
         hs = self.transformer(
-            query_encoding=query_encoding,  # (num_queries)x(BT)xF
-            # query_encoding=query_embed,  # (num_queries)x(BT)xF
+            # query_encoding=query_encoding,  # (num_queries)x(BT)xF
+            query_encoding=query_embed,  # (num_queries)x(BT)xF
             vt_encoding=vt_encoding,  # (1)x(BT)xF
             query_mask=object_mask,  # num_queriesxnum_queries)
             vt_mask=vt_mask,  # (BT)x1
