@@ -1,5 +1,5 @@
 # Spatio Video Grounding via Graph Transformer
-<details open>
+
 <summary> <b>Background and Motivation</b> </summary>
 This work extends an existing video QA system, <a href="https://arxiv.org/abs/2302.13668">CoVGT</a>, by incorporating a space-time decoder specifically tailored for spatial localization. CoVGT adopts a graph-based representation for video elements, treating them as nodes and edges to capture dynamic interactions among objects for effective video reasoning. The use of graph transformers on nodes and edges enables the model to derive informative temporal relations across different timestamps. Their innovative approach to video question answering using graph neural networks motivated us to embark on this project.
 
@@ -10,8 +10,6 @@ Our contributions are the following:
 * Manipulating STAR dataset annotations to present a single location as the visual gt answer.
 * Parsing STAR dataset to filter out questions containing non-object answers given the questions template.
 * Adding a space-time decoder to model spatial interaction over the entire video.
-  
-</details>
 
 
 <div align="center">
@@ -30,13 +28,13 @@ Assume you have installed Anaconda3, cuda version > 11.0 with gpu memory >= 24G,
 ## Dataset 
 
 ### Annotations
-Please download the videos from this <a href="https://ai2-public-datasets.s3-us-west-2.amazonaws.com/charades/Charades_v1_480.zip>link</a>.
+Please download the videos from this <a href="https://ai2-public-datasets.s3-us-west-2.amazonaws.com/charades/Charades_v1_480.zip">link</a>.
 The manipulated annotations is stored in '''/datasets/STAR/''' directory. '''train.json''' and '''val.json''' are the finalized annotations for the train and validation sets. Since STAR dataset doesn't provide a test set, we use the validation set as the test set. '''clips_train.json''' and '''clips_val.json''' show the mapping of the sampled frames for each data point (question corresponding to a video). These sampled frames ensure that we have the frames containing the visual answer for every question.
 '''vid_fps_mapping.json''' also indicates the mapping of fps to each video.
 
 
 ### Features
-Please download the pre-extracted video features from <a href="https://ai2-public-datasets.s3-us-west-2.amazonaws.com/charades/Charades_v1_480.zip>link</a>.
+Please download the pre-extracted video features from <a href="https://ai2-public-datasets.s3-us-west-2.amazonaws.com/charades/Charades_v1_480.zip">link</a>.
 
 
 ## Demo
