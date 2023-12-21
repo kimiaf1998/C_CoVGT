@@ -1,12 +1,11 @@
 # Spatio Video Grounding via Graph Transformer
 <details open>
-<summary> <b>Introduction</b> </summary>
+<summary> <b>Background and Motivation</b> </summary>
 This work extends an existing video QA system, <a href="https://arxiv.org/abs/2302.13668">CoVGT</a>, by incorporating a space-time decoder specifically tailored for spatial localization. CoVGT adopts a graph-based representation for video elements, treating them as nodes and edges to capture dynamic interactions among objects for effective video reasoning. The use of graph transformers on nodes and edges enables the model to derive informative temporal relations across different timestamps. Their innovative approach to video question answering using graph neural networks motivated us to embark on this project.
 
-
+</br>
 ** Note: The space-time decoder is inspired by <a href="https://arxiv.org/abs/2203.16434">TubeDETR</a>.
-
-
+</br>
 Our contributions are the following:  
 * Manipulating STAR dataset annotations to present a single location as the visual gt answer.
 * Parsing STAR dataset to filter out questions containing non-object answers given the questions template.
@@ -28,22 +27,24 @@ Assume you have installed Anaconda3, cuda version > 11.0 with gpu memory >= 24G,
 >conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
 >pip install -r requirements.txt
 ```
-## Preparation
-Please create a data folder outside this repo, so you have two folders in your workspace 'workspace/data/' and 'workspace/CoVGT/'. 
+## Dataset 
 
-Below we use NExT-QA as an example to get you farmiliar with the code. 
-Please download the related video feature and QA annotations according to the links provided in the ```Results and Resources``` section. Note that the QA annotations will be saved into ```workspace/CoVGT/datasets/nextqa/``` after you clone this repo., video features into ```workspace/data/nextqa/{frame_feat, region_feat_n}``` and checkpoint files into ```workspace/data/save_models/nextqa/```. Change default paths in global_parameters.py and args.py for your own datasets.
+### Annotations
+Please download the videos from this <a href="https://ai2-public-datasets.s3-us-west-2.amazonaws.com/charades/Charades_v1_480.zip>link</a>.
+The manipulated annotations is stored in '''/datasets/STAR/''' directory. '''train.json''' and '''val.json''' are the finalized annotations for the train and validation sets. Since STAR dataset doesn't provide a test set, we use the validation set as the test set. '''clips_train.json''' and '''clips_val.json''' show the mapping of the sampled frames for each data point (question corresponding to a video). These sampled frames ensure that we have the frames containing the visual answer for every question.
+'''vid_fps_mapping.json''' also indicates the mapping of fps to each video.
 
-## Inference
-```
-./shells/next_test.sh 0
-```
-## Evaluation
-```
-python eval_next.py --folder CoVGT_FTCoWV --mode test
-``` 
 
-## Results and Resources
+### Features
+Please download the pre-extracted video features from <a href="https://ai2-public-datasets.s3-us-west-2.amazonaws.com/charades/Charades_v1_480.zip>link</a>.
+
+
+## Demo
+```
+./shells/star_demo.sh 0
+```
+
+## Results
 **<p align="center">Table 1. VideoQA Accuracy (%) on Test Set.</p>**
 <table>
   <tr>
@@ -125,7 +126,7 @@ python eval_next.py --folder CoVGT_FTCoWV --mode test
 ## Train
 We have provided all the scripts in the folder 'shells', you can start your training by specifying the GPU IDs behind the script. (If you have multiple GPUs, you can separate them with comma: ./shell/nextqa_train.sh 0,1)
 ```
-./shell/nextqa_train.sh 0
+./shell/star_train.sh 0
 ```
 It will train the model and save to the folder 'save_models/nextqa/CoVGT/'. You will get results around 60.1% and 59.4% on the val and test set respectively.
 
