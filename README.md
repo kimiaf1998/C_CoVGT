@@ -1,6 +1,6 @@
 # Spatio Video Grounding via Graph Transformer
 
-<summary> <b>Background and Motivation</b> </summary>
+## Background and Motivation
 This work extends an existing video QA system, <a href="https://arxiv.org/abs/2302.13668">CoVGT</a>, by incorporating a space-time decoder specifically tailored for spatial localization. CoVGT adopts a graph-based representation for video elements, treating them as nodes and edges to capture dynamic interactions among objects for effective video reasoning. The use of graph transformers on nodes and edges enables the model to derive informative temporal relations across different timestamps. Their innovative approach to video question answering using graph neural networks motivated us to embark on this project.
 
 </br>
