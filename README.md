@@ -151,17 +151,5 @@ address = {Los Alamitos, CA, USA},
 month = {nov}
 }
 ```
-```
-@inproceedings{xiao2022video,
-  title={Video Graph Transformer for Video Question Answering},
-  author={Xiao, Junbin and Zhou, Pan and Chua, Tat-Seng and Yan, Shuicheng},
-  booktitle={European Conference on Computer Vision},
-  pages={39--58},
-  year={2022},
-  organization={Springer}
-}
-```
 ## Notes
-If you use any resources from this repo, please kindly cite our paper and acknowledge the source.
-## License
-This repository is released under the Apache 2.0 license as found in the [LICENSE](LICENSE) file.
+If you use any resources from this repo, please kindly star our repo and acknowledge the source.
