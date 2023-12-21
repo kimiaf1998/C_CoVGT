@@ -287,8 +287,8 @@ def get_parser():
     )
 
     # Loss coefficients
-    parser.add_argument("--bbox_loss_coef", default=5, type=float)
-    parser.add_argument("--giou_loss_coef", default=2, type=float)
+    parser.add_argument("--bbox_loss_coef", default=2, type=float)
+    parser.add_argument("--giou_loss_coef", default=5, type=float)
     parser.add_argument("--sted_loss_coef", default=10, type=float)
     parser.add_argument("--guided_attn_loss_coef", default=1, type=float)
 
