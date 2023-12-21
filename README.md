@@ -3,7 +3,9 @@
 <summary> <b>Introduction</b> </summary>
 This work extends an existing video QA system, <a href="https://arxiv.org/abs/2302.13668">CoVGT</a>, by incorporating a space-time decoder specifically tailored for spatial localization. CoVGT adopts a graph-based representation for video elements, treating them as nodes and edges to capture dynamic interactions among objects for effective video reasoning. The use of graph transformers on nodes and edges enables the model to derive informative temporal relations across different timestamps. Their innovative approach to video question answering using graph neural networks motivated us to embark on this project.
 
+
 ** Note: The space-time decoder is inspired by <a href="https://arxiv.org/abs/2203.16434">TubeDETR</a>.
+
 
 Our contributions are the following:  
 * Manipulating STAR dataset annotations to present a single location as the visual gt answer.
@@ -14,18 +16,15 @@ Our contributions are the following:
 
 
 <div align="center">
-  <img width="50%" alt="Illustration of contrastive learning strategy" src="./misc/CoVGT.png">
+  <img width="50%" alt="Overview of the Proposed Model Architecture" src="./misc/CoVGT.png">
 </div>
 
-## Todo
-1. [ ] Release feature of other datasets. Please email the first author and specify the reason as the data is strictly for research purpose.
-
-## Environment
+## Setup
 Assume you have installed Anaconda3, cuda version > 11.0 with gpu memory >= 24G, please do the following to setup the envs:
 ```
->conda create -n videoqa python==3.8.16
->conda activate videoqa
->git clone https://github.com/doc-doc/CoVGT.git
+>conda create -n vqa python==3.8.18
+>conda activate vqa
+>git clone https://github.com/kimiaf1998/C_CoVGT.git
 >conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
 >pip install -r requirements.txt
 ```
