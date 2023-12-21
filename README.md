@@ -14,7 +14,7 @@ Our contributions are the following:
 
 
 <div align="center">
-  <img width="50%" alt="Overview of the Proposed Model Architecture" src="./misc/CoVGT.png">
+  <img width="50%" alt="Overview of the Proposed Model Architecture" src="./misc/C_CoVGT_model_arch.png">
 </div>
 
 ## Setup
