@@ -13,6 +13,7 @@ Our contributions are the following:
 * Parsing STAR dataset to filter out questions containing non-object answers given the questions template.
 * Adding a space-time decoder to model spatial interaction over the entire video.
 
+| ![scr1](./misc/C_CoVGT_model_arch.png "Overview of the Proposed Model Architecture") | ![scr2](./misc/C_CoVGT_space_time_arch.png "Space-Time Decoder Architecture") |
 
 <div align="center">
   <img width="80%" alt="Overview of the Proposed Model Architecture" src="./misc/C_CoVGT_model_arch.png">
