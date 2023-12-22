@@ -64,7 +64,7 @@ Set some useful args:
 **<p align="center">Table 1. Quantitative results on STAR dataset.</p>**
 | Model | parameters | Interaction (vIoU/vIoU@0.3/vIoU@0.5) | Sequence (vIoU/vIoU@0.3/vIoU@0.5) | Prediction (vIoU/vIoU@0.3/vIoU@0.5) | Feasibility (vIoU/vIoU@0.3/vIoU@0.5) | qa All Acc. |
 |-----|-----|-----|-----|-----|-----|-----|
-| <a href="https://arxiv.org/abs/2302.13668">CoVGT</a> | bnum=10 | - | - | - | - | 46.20 |
+| [CoVGT](https://arxiv.org/abs/2302.13668)| bnum=10 | - | - | - | - | 46.20 |
 | Ours | bnum=10 | 17.8/25.8/19.1 | 16.5/28.6/17.9 | 12.3/21.5/16.6 | 15.9/23.1/21.4 | 44.59 |
 
 
