@@ -5,7 +5,6 @@ This work extends an existing video QA system, <a href="https://arxiv.org/abs/23
 
 
 ** Note: The space-time decoder is inspired by <a href="https://arxiv.org/abs/2203.16434">TubeDETR</a>.
-
 </br>
 Our contributions are the following:  
 
