@@ -62,7 +62,7 @@ Set some useful args:
 
 
 ## Results
-**<p align="center">Table 1. VideoQA Accuracy (%) on Test Set.</p>**
+**<p align="center">Table 1. Quantitative results on STAR dataset.</p>**
 | Model | parameters | Interaction (vIoU/vIoU@0.3/vIoU@0.5) | Sequence (vIoU/vIoU@0.3/vIoU@0.5) | Prediction (vIoU/vIoU@0.3/vIoU@0.5) | Feasibility (vIoU/vIoU@0.3/vIoU@0.5) | qa All Acc. |
 |-----|-----|-----|-----|-----|-----|-----|
 | CoVGT | bnum=10 | - | - | - | - | 46.20 |
@@ -70,7 +70,7 @@ Set some useful args:
 
 ### Result Visualization
 <div align="center">
-  <img width="100%" alt="VGT vs VGT without DGT" src="./misc/CoVGT-res.png">
+  <img width="100%" alt="VGT vs VGT without DGT" src="./misc/C_CoVGT_qualitative_results.png">
 </div>
 
 ## Citations 
