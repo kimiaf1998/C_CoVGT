@@ -8,6 +8,7 @@ This work extends an existing video QA system, <a href="https://arxiv.org/abs/23
 
 </br>
 Our contributions are the following:  
+
 * Manipulating STAR dataset annotations to present a single location as the visual gt answer.
 * Parsing STAR dataset to filter out questions containing non-object answers given the questions template.
 * Adding a space-time decoder to model spatial interaction over the entire video.
@@ -30,18 +31,36 @@ Assume you have installed Anaconda3, cuda version > 11.0 with gpu memory >= 24G,
 
 ### Annotations
 Please download the videos from this <a href="https://ai2-public-datasets.s3-us-west-2.amazonaws.com/charades/Charades_v1_480.zip">link</a>.
-The manipulated annotations is stored in ```/datasets/STAR/``` directory. ```train.json``` and ```val.json``` are the finalized annotations for the train and validation sets. Since STAR dataset doesn't provide a test set, we use the validation set as the test set. ```clips_train.json``` and ```clips_val.json``` show the mapping of the sampled frames for each data point (question corresponding to a video). These sampled frames ensure that we have the frames containing the visual answer for every question.
+New annotations are stored in ```/datasets/STAR/``` directory. ```train.json``` and ```val.json``` are the finalized annotations for the train and validation sets. Since the STAR dataset doesn't provide a test set, we use the validation set as the test set. ```clips_train.json``` and ```clips_val.json``` show the mapping of the sampled frames for each data point (question corresponding to a video). These sampled frames ensure that we have the frames containing the visual answer for every question.
 ```vid_fps_mapping.json``` also indicates the mapping of fps to each video.
 
 
 ### Features
-Please download the pre-extracted video features from <a href="https://ai2-public-datasets.s3-us-west-2.amazonaws.com/charades/Charades_v1_480.zip">link</a>. The frame features are stored in ```frame_feat``` and regional features in ```bbox```. To extract frame-wise features, use ```tools/preprocess_feature.py``` and for regional features, use the provided tool in <a href="https://github.com/MILVLG/bottom-up-attention.pytorch">BUA<a>.
+Please download the pre-extracted video features from <a href="https://ai2-public-datasets.s3-us-west-2.amazonaws.com/charades/Charades_v1_480.zip">link</a>. The frame features are stored in ```frame_feat``` and regional features in ```bbox```. The pre-extracted regional features hold the top 10 confident features. To extract frame-wise features, use ```tools/preprocess_feature.py``` and for regional features, use the provided tool in <a href="https://github.com/MILVLG/bottom-up-attention.pytorch">BUA<a>.
 
 
 ## Demo
+
+Run the following command to infer and visualize results on a custom video of the STAR dataset. You may want to change the video information.
 ```
 ./shells/star_demo.sh 0
 ```
+
+## Train
+To train the model, use the train script provided in the folder 'shells' and run it by specifying the GPU IDs behind the script. (If you have multiple GPUs, you can separate them with a comma: ./shell/star_train.sh 0,1)
+```
+./shell/star_train.sh 0
+```
+It will train the model and save it to the folder 'workspace/save_models/STAR/CoVGT/'. 
+
+Some useful args:
+Set
+* ```--bnum``` to the number of object queries.
+* ```--mc``` to the number of multiple-choices.
+* ```--qmax_words``` and ```--amax_words``` to the number of maximum questin and answer tokens respectively.
+* ```--video_max_len``` to the number of frames to sample from each video.
+* ```--bbox```, ```--giou_loss_coef``` and ```--cl_loss``` to the appropriate weight for each loss contribution. 
+
 
 ## Results
 **<p align="center">Table 1. VideoQA Accuracy (%) on Test Set.</p>**
@@ -122,14 +141,7 @@ Please download the pre-extracted video features from <a href="https://ai2-publi
 </table>
 (The feature files are identical to VGT. We have merged some files of the same dataset to avoid too many links.)
 
-## Train
-We have provided all the scripts in the folder 'shells', you can start your training by specifying the GPU IDs behind the script. (If you have multiple GPUs, you can separate them with comma: ./shell/nextqa_train.sh 0,1)
-```
-./shell/star_train.sh 0
-```
-It will train the model and save to the folder 'save_models/nextqa/CoVGT/'. You will get results around 60.1% and 59.4% on the val and test set respectively.
-
-### Result Visualization (NExT-QA)
+### Result Visualization
 <div align="center">
   <img width="100%" alt="VGT vs VGT without DGT" src="./misc/CoVGT-res.png">
 </div>
