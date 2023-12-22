@@ -69,10 +69,10 @@ Set some useful args:
 | Ours | bnum=10 | 17.8/25.8/19.1 | 16.5/28.6/17.9 | 12.3/21.5/16.6 | 15.9/23.1/21.4 | 44.59 |
 
 ### Result Visualization
-**<div align="center">
-  <p>Table 2. Quantitative results on STAR dataset.</p>
+<div align="center">
+  <b>Table 2. Quantitative results on STAR dataset.</b>
   <img width="80%" alt="C_CoVGT Qualitative Results" src="./misc/C_CoVGT_qualitative_results.png">
-</div>**
+</div>
 
 ## Citations 
 ```
