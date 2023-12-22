@@ -41,7 +41,7 @@ Please download the pre-extracted video features from <a href="https://ai2-publi
 
 ## Demo
 
-Run the following command to infer and visualize results on any video of the STAR dataset. You may want to change the video information.
+Run the following command to infer and visualize results on any video of the STAR dataset. You may want to change the video information. Download an put the <a href="https://ai2-public-datasets.s3-us-west-2.amazonaws.com/charades/Charades_v1_480.zip">checkpoint</a> for the best model in ```/data/save_models/STAR/CoVGT```.
 ```
 ./shells/star_demo.sh 0
 ```
@@ -53,13 +53,12 @@ To train the model, use the train script provided in the folder 'shells' and run
 ```
 It will train the model and save it to the folder 'workspace/save_models/STAR/CoVGT/'. 
 
-Some useful args:
-Set
+Set some useful args:
 * ```--bnum``` to the number of object queries.
 * ```--mc``` to the number of multiple-choices.
-* ```--qmax_words``` and ```--amax_words``` to the number of maximum questin and answer tokens respectively.
+* ```--qmax_words``` and ```--amax_words``` to the number of maximum question and answer tokens, respectively.
 * ```--video_max_len``` to the number of frames to sample from each video.
-* ```--bbox```, ```--giou_loss_coef``` and ```--cl_loss``` to the appropriate weight for each loss contribution. 
+* ```--bbox_loss_coef```, ```--giou_loss_coef``` and ```--cl_loss``` to the appropriate weight for each loss contribution. 
 
 
 ## Results
