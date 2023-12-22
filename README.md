@@ -68,27 +68,18 @@ Set some useful args:
 | CoVGT | bnum=10 | - | - | - | - | 46.20 |
 | Ours | bnum=10 | 17.8/25.8/19.1 | 16.5/28.6/17.9 | 12.3/21.5/16.6 | 15.9/23.1/21.4 | 44.59 |
 
-### Result Visualization
+
 <div align="center">
-  <b>Table 2. Quantitative results on STAR dataset.</b>
+  <b>Table 2. Qualitative examples result on STAR dataset.</b>
   <img width="80%" alt="C_CoVGT Qualitative Results" src="./misc/C_CoVGT_qualitative_results.png">
 </div>
 
 ## Citations 
 ```
-@ARTICLE {xiao2023contrastive,
-author = {J. Xiao and P. Zhou and A. Yao and Y. Li and R. Hong and S. Yan and T. Chua},
-journal = {IEEE Transactions on Pattern Analysis &amp; Machine Intelligence},
-title = {Contrastive Video Question Answering via Video Graph Transformer},
-year = {2023},
-volume = {45},
-number = {11},
-issn = {1939-3539},
-pages = {13265-13280},
-doi = {10.1109/TPAMI.2023.3292266},
-publisher = {IEEE Computer Society},
-address = {Los Alamitos, CA, USA},
-month = {nov}
+@misc{kimia2023vqa,
+      title={Spatio Video Grounding via Graph Transformer}, 
+      authors={Kimia Afshari},
+      year={2023}
 }
 ```
 ## Notes
