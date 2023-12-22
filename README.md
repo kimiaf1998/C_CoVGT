@@ -64,7 +64,7 @@ Set some useful args:
 ## Results
 **<p align="center">Table 1. VideoQA Accuracy (%) on Test Set.</p>**
 | Model | parameters | Interaction (vIoU/vIoU@0.3/vIoU@0.5) | Sequence (vIoU/vIoU@0.3/vIoU@0.5) | Prediction (vIoU/vIoU@0.3/vIoU@0.5) | Feasibility (vIoU/vIoU@0.3/vIoU@0.5) | qa All Acc. |
-|-----|-----|-----|-----|-----|-----|-----|-----|
+|-----|-----|-----|-----|-----|-----|-----|
 | CoVGT | bnum=10 | - | - | - | - | 46.20 |
 | Ours | bnum=10 | 17.8/25.8/19.1 | 16.5/28.6/17.9 | 12.3/21.5/16.6 | 15.9/23.1/21.4 | 44.59 |
 
