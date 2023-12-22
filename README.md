@@ -41,7 +41,7 @@ Please download the pre-extracted video features from <a href="https://ai2-publi
 
 ## Demo
 
-Run the following command to infer and visualize results on a custom video of the STAR dataset. You may want to change the video information.
+Run the following command to infer and visualize results on any video of the STAR dataset. You may want to change the video information.
 ```
 ./shells/star_demo.sh 0
 ```
