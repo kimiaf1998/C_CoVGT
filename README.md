@@ -35,7 +35,7 @@ New annotations are stored in ```/datasets/STAR/``` directory. ```train.json``` 
 
 
 ### Features
-Please download the pre-extracted video features from <a href="https://ai2-public-datasets.s3-us-west-2.amazonaws.com/charades/Charades_v1_480.zip">link</a>. The frame features are stored in ```frame_feat``` and regional features in ```bbox```. The pre-extracted regional features hold the top 10 confident features. To extract frame-wise features, use ```tools/preprocess_feature.py``` and for regional features, use the provided tool in <a href="https://github.com/MILVLG/bottom-up-attention.pytorch">BUA<a>.
+Please download the pre-extracted video features from <a href="https://ai2-public-datasets.s3-us-west-2.amazonaws.com/charades/Charades_v1_480.zip">link</a>. The frame features are stored in ```frame_feat``` and regional features in ```bbox``` folders. The pre-extracted regional features hold the top-10 confident features. To extract frame-wise features on your own, use ```tools/preprocess_feature.py``` and for regional features, use the provided tool in <a href="https://github.com/MILVLG/bottom-up-attention.pytorch">BUA<a>.
 
 
 ## Demo
