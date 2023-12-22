@@ -18,7 +18,7 @@ Our contributions are the following:
 | Proposed Model Architecture | Space-Time Decoder Architecture |
 
 ## Setup
-Assume you have installed Anaconda3, cuda version > 11.0 with gpu memory >= 24G, please do the following to setup the envs:
+Assume you have installed Anaconda3, cuda version > 11.0 with gpu memory >= 24G, please do the following to setup the env:
 ```
 >conda create -n vqa python==3.8.18
 >conda activate vqa
