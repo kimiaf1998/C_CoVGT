@@ -70,6 +70,7 @@ Set some useful args:
 
 ### Result Visualization
 <div align="center">
+  **<p>Table 2. Quantitative results on STAR dataset.</p>**
   <img width="80%" alt="C_CoVGT Qualitative Results" src="./misc/C_CoVGT_qualitative_results.png">
 </div>
 
