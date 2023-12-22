@@ -41,7 +41,7 @@ Please download the pre-extracted video features from <a href="https://ai2-publi
 
 ## Demo
 
-Run the following command to infer and visualize results on any video of the STAR dataset. You may want to change the video information. Download an put the <a href="https://ai2-public-datasets.s3-us-west-2.amazonaws.com/charades/Charades_v1_480.zip">checkpoint</a> for the best model in ```/data/save_models/STAR/CoVGT```.
+Run the following command to infer and visualize results on any video of the STAR dataset. You may want to change the video information. Download and put the <a href="https://drive.google.com/file/d/1GqYjnad42-fri1lxSmT0vFWwYez6_iOv/view?usp=sharing)">checkpoint</a> for the best model in ```/data/save_models/STAR/CoVGT```.
 ```
 ./shells/star_demo.sh 0
 ```
@@ -63,82 +63,10 @@ Set some useful args:
 
 ## Results
 **<p align="center">Table 1. VideoQA Accuracy (%) on Test Set.</p>**
-<table>
-  <tr>
-    <th>Cross-Modal Pretrain</th>
-    <th><a href="https://github.com/doc-doc/NExT-QA", target="_blank">NExT-QA</a></th>
-    <th><a href="https://github.com/bcmi/Causal-VidQA", target="_blank">Causal-VidQA</a></th>
-    <th><a href="https://bobbywu.com/STAR/">STAR</a></th>
-    <th><a href="https://github.com/YunseokJANG/tgif-qa", target="_blank">TGIF-QA</a> (Action)</th>
-    <th>TGIF-QA (Trans)</th>
-    <th>TGIF-QA (FrameQA)</th>
-    <th>TGIF-QA-R* (Action)</th>
-    <th>TGIF-QA-R* (Trans)</th>
-    <th><a href="https://github.com/xudejing/video-question-answering">MSRVTT-QA</a></th>
-  </tr>
-  <tr>
-    <td>-</td>
-    <td>59.4</td>
-    <td>59.1</td>
-    <td>44.0</td>
-    <td>94.7</td>
-    <td>97.6</td>
-    <td>61.6</td>
-    <td>60.8</td>
-    <td>73.8</td>
-    <td>38.3</td>
-  </tr>
-  
-  <tr>
-    <td><a href="https://drive.google.com/file/d/18KUgq22hLRmRfCgfMf_TXRgjCt3NE8vO/view?usp=sharing">WebVid0.18M</a></td>
-    <td><a href="https://drive.google.com/file/d/1Udhm0BdD_YgcrLZ7RwMXwkKGlW-vHo7H/view?usp=sharing">59.7<a></td>
-    <td>60.8</td>
-    <td>46.2</td>
-    <td>91.3</td>
-    <td>96.2</td>
-    <td>61.7</td>
-    <td>61.0</td>
-    <td>73.2</td>
-    <td>40.0</td>
-  </tr>
-  <tr>
-   <td>-</td>
-    <td><a href="https://drive.google.com/file/d/19TRupHHAP9m0eE9n3b2HMcliiJE9VGcN/view?usp=sharing">feats</a></td>
-    <td>feats</td>
-    <td>feats</td>
-    <td>feats</td>
-    <td>feats</td>
-    <td>feats</td>
-    <td>feats</td>
-    <td>feats</td>
-    <td><a href="https://drive.google.com/file/d/14efO-eeYFSKKPhhG3AUqJLOONm80xDo8/view?usp=sharing">feats</a></td>
-  </tr>
-  <tr>
-    <td>-</td>
-    <td><a href="https://drive.google.com/file/d/1jTcRCrVHS66ckOUfWRb-rXdzJ52XAWQH/view?usp=sharing">videos</a></td>
-    <td>videos</td>
-    <td>videos</td>
-    <td>videos</td>
-    <td>videos</td>
-    <td>videos</td>
-    <td>videos</td>
-    <td>videos</td>
-    <td>videos</td>
-  </tr>
-  <tr>
-    <td>-</td>
-    <td><a href="https://github.com/doc-doc/CoVGT/tree/main/datasets/nextqa">Q&A</a></td>
-    <td><a href="https://drive.google.com/file/d/1XLPiVY72GV0NYXGNR32wNQQMRe1J-33E/view?usp=sharing">Q&A</a></td>
-    <td><a href="https://drive.google.com/file/d/16GBhLrtDooB4DbKgwgERY_XvfUQ-9p8J/view?usp=sharing">Q&A</a></td>
-    <td><a href="https://drive.google.com/file/d/1CE04mDGiQ2EcG5zbQAgERi-EukiIPKSw/view?usp=sharing">Q&A</a></td>
-    <td>Q&A</td>
-    <td>Q&A</td>
-    <td><a href="https://drive.google.com/file/d/1arKsPSkx9DwlX1SpP_qoh30PgfgitKQv/view?usp=sharing">Q&A</a></td>
-    <td>Q&A</td>
-    <td><a href="https://drive.google.com/file/d/1vstHqtgZQBkPzzRTZo-Nb15rAQ4b7gOl/view?usp=sharing">Q&A</a></td>
-  </tr>
-</table>
-(The feature files are identical to VGT. We have merged some files of the same dataset to avoid too many links.)
+| Model | parameters | Interaction (vIoU/vIoU@0.3/vIoU@0.5) | Sequence (vIoU/vIoU@0.3/vIoU@0.5) | Prediction (vIoU/vIoU@0.3/vIoU@0.5) | Feasibility (vIoU/vIoU@0.3/vIoU@0.5) | qa All Acc. |
+|-----|-----|-----|-----|-----|-----|-----|-----|
+| CoVGT | bnum=10 | - | - | - | - | 46.20 |
+| Ours | bnum=10 | 17.8/25.8/19.1 | 16.5/28.6/17.9 | 12.3/21.5/16.6 | 15.9/23.1/21.4 | 44.59 |
 
 ### Result Visualization
 <div align="center">
