@@ -70,7 +70,7 @@ Set some useful args:
 
 ### Result Visualization
 <div align="center">
-  <img width="100%" alt="VGT vs VGT without DGT" src="./misc/C_CoVGT_qualitative_results.png">
+  <img width="80%" alt="C_CoVGT Qualitative Results" src="./misc/C_CoVGT_qualitative_results.png">
 </div>
 
 ## Citations 
