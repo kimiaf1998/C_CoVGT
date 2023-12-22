@@ -15,7 +15,7 @@ Our contributions are the following:
 
 | ![scr1](./misc/C_CoVGT_model_arch.png "Overview of the Proposed Model Architecture") | ![scr2](./misc/C_CoVGT_space_time_arch.png "Space-Time Decoder Architecture") |
 | ------------ | ------------ |
-| Overview of the Proposed Model Architecture | Space-Time Decoder Architecture |
+| Proposed Model Architecture | Space-Time Decoder Architecture |
 
 ## Setup
 Assume you have installed Anaconda3, cuda version > 11.0 with gpu memory >= 24G, please do the following to setup the envs:
