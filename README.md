@@ -46,11 +46,11 @@ Run the following command to infer and visualize results on any video of the STA
 ```
 
 ## Train
-To train the model, use the train script provided in the folder 'shells' and run it by specifying the GPU IDs behind the script. (If you have multiple GPUs, you can separate them with a comma: ./shell/star_train.sh 0,1)
+To train the model, use the train script provided in the folder ```shells``` and run it by specifying the GPU IDs behind the script. (If you have multiple GPUs, you can separate them with a comma: ./shell/star_train.sh 0,1)
 ```
 ./shell/star_train.sh 0
 ```
-It will train the model and save it to the folder 'workspace/save_models/STAR/CoVGT/'. 
+It will train the model and save it to the folder 'workspace/save_models/STAR/CoVGT/' by default. 
 
 Set some useful args:
 * ```--bnum``` to the number of object queries.
