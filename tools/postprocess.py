@@ -6,7 +6,7 @@ class PostProcess(nn.Module):
     """This module converts the models's output into the format expected by the coco api"""
 
     @torch.no_grad()
-    def forward(self, outputs, target_sizes):
+    def forward(self, out_bbox, target_sizes):
         """Perform the computation
         Parameters:
             outputs: raw outputs of the models
@@ -14,7 +14,7 @@ class PostProcess(nn.Module):
                           For evaluation, this must be the original image size (before any data augmentation)
                           For visualization, this should be the image size after data augment, but before padding
         """
-        out_bbox = outputs["pred_boxes"]
+        # out_bbox = outputs["pred_boxes"]
         # and from relative [0, 1] to absolute [0, height] coordinate
         img_h, img_w = target_sizes.unbind(1)
         scale_fct = torch.stack([img_w, img_h, img_w, img_h], dim=1)

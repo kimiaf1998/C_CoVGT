@@ -14,7 +14,9 @@ from models.Tube_CoVGT import build_model
 from util import compute_a2v, load_model_by_key, save_to, plot_and_save_epochs_res
 from dataloader.cvqa_loader import get_videoqa_loaders
 from train.train_covgt import train, eval
+from tools.bbox_visualizer import draw_and_save_rects, add_label
 from tqdm import tqdm
+from tools.box_ops import box_cxcywh_to_xyxy
 
 
 def main(args):
@@ -192,20 +194,34 @@ def main(args):
         save_to(save_path, results)
         # Visualize results
 
-        results["pred_boxes"] = box_cxcywh_to_xyxy(results["pred_boxes"])
-        boxes = PostProcess()(results, vid_orig_size).to(device)  # nx32x10x4
-        results["pred_boxes"] = boxes[..., 0, :]
-
-
         for q_id, values in results.items():
+            preds = values["prediction"]
+            gt = values["answer"]
             video_id = values['video_id']
+            frame_mapping = values['frame_mapping']
+            video_frame_ids = frame_mapping.values()
             question = values['question']
-            answer = values['answer']
-            pred = values['prediction']
-            boxes = values['pred_boxes']
-            print("boxes:", boxes.shape)
+            pred_text = preds['desc']
+            pred_boxes = preds['box']
+            gt_text = gt['desc']
+            gt_boxes = gt['box']
 
+            pred_boxes = box_cxcywh_to_xyxy(pred_boxes)
+            pred_boxes = PostProcess()(pred_boxes, vid_orig_size).to(device)  # nx32x10x4
+            pred_boxes = pred_boxes[..., 0, :]
 
+            print("boxes:", pred_boxes.shape)
+            video_save_path = os.path.join(
+                args.save_dir,
+                video_id)
+            # extract actual images from the video to process them adding boxes
+            draw_and_save_rects(os.path.join(video_path, video_id), video_frame_ids, pred_boxes, video_save_path)
+            draw_and_save_rects(os.path.join(video_path, video_id), video_frame_ids, gt_boxes, video_save_path)
+
+            # Add question/answer/preds
+            add_label(img, question+" "+gt_text, [10, 10, 20, 15])
+            add_label(img, "pred: "+pred_text, [10 ,20, 20, 25])
+            print(f"Video saved in {video_save_path}")
 
 
 

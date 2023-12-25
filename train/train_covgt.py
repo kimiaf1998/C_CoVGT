@@ -27,8 +27,8 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
         if not args.mc:
             model.module._compute_answer_embedding(a2v)
         for i, batch in enumerate(tqdm(data_loader, desc="Evaluating batches", unit="batch")):
-            # if i == 2:
-            #     break
+            if i == 2:
+                break
             answer_id, answer, video_id, video_o, video_f, vid_orig_size, question, question_id, seg_feats, seg_num , bboxes, bboxes_mask, frame_mapping = (
                 batch["answer_id"],
                 batch["answer"].cuda(),
@@ -122,7 +122,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                     ans_id = int(answer_id.numpy()[bs])
                     pred = choices[pred_id][bs]
                     ans = choices[ans_id][bs]
-                    qa_predictions[qid] = {'video_id': vid_id, 'question': question, 'prediction': pred, 'answer':ans, 'frame_mapping': frame_map}
+                    qa_predictions[qid] = {'video_id': vid_id, 'question': question, 'prediction': pred, 'answer':ans, 'frame_map': frame_map}
 
 
                 # convert predicts from relative [0, 1] to absolute [0, height] coordinates
@@ -149,7 +149,10 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
     outputs["metrics"].update({"acc": metrics["acc"] / count})
     outputs["results"] = {
         question_id: {
-            "prediction": {"desc": qa_predictions[question_id]['prediction'],
+            "video_id": qa_predictions[question_id]['video_id'],
+            "frame_mapping": qa_predictions[question_id]['frame_map'],
+            'question': qa_predictions[question_id]['question'],
+                "prediction": {"desc": qa_predictions[question_id]['prediction'],
                            "box": loc_predictions[question_id]['prediction'].detach().cpu().tolist()},
             "answer": {"desc": qa_predictions[question_id]['answer'],
                        "box": loc_predictions[question_id]['answer'].detach().cpu().tolist()}
