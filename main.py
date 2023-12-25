@@ -186,16 +186,27 @@ def main(args):
         print(f"Best val models at epoch {best_epoch + 1} with m_viou {best_val_viou*100:.2f} and acc {val_acc*100:.2f}")
     else:
         # Evaluate on val (=test) set
-        outputs = eval(model, test_loader, a2v, args, test=False, tokenizer=tokenizer)  # zero-shot VideoQA
+        outputs = eval(model, test_loader, a2v, args, test=True, tokenizer=tokenizer)  # zero-shot VideoQA
         results = outputs["results"]
         save_path = osp.join(args.save_dir, 'val-res0.json')
         save_to(save_path, results)
-        print("Model Validation Results:")
-        logging.info("Model Validation Results:")
-        step = "Test"
-        for k, v in outputs["metrics"].items():
-            print(f"{step} {k}: {v:.2%}")
-            logging.info(f"{step} {k}: {v:.2%}")
+        # Visualize results
+
+        results["pred_boxes"] = box_cxcywh_to_xyxy(results["pred_boxes"])
+        boxes = PostProcess()(results, vid_orig_size).to(device)  # nx32x10x4
+        results["pred_boxes"] = boxes[..., 0, :]
+
+
+        for q_id, values in results.items():
+            video_id = values['video_id']
+            question = values['question']
+            answer = values['answer']
+            pred = values['prediction']
+            boxes = values['pred_boxes']
+            print("boxes:", boxes.shape)
+
+
+
 
 
 if __name__ == "__main__":
