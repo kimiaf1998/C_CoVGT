@@ -15,6 +15,7 @@ from tools.object_align import align
 from tools.postprocess import PostProcess
 from tools.util import tokenize, load_file, transform_bb, load_model_by_key
 from tools.box_ops import box_cxcywh_to_xyxy
+from tools.bbox_visualizer import draw_and_save_rects
 from util import get_mask
 
 video_path = f'/data/kimia/hdd3_mount/kimia/data/STAR/frames_orig_fps'
@@ -29,7 +30,7 @@ def get_video_info(video_name, qid):
     video_frame_ids = []
     fid = vid_clips[0][0]
     # features indices starts from 0 while frames 1
-    img = Image.open(f'{video_path}/{video_id}/{int(fid) + 1:06}.png')
+    img = Image.open(f'{video_path}/{video_name}/{int(fid) + 1:06}.png')
     width, height = img.size
     img.close()
 
@@ -154,7 +155,7 @@ if __name__ == "__main__":
 
         # convert predicts from relative [0, 1] to absolute [0, height] coordinates
         tube_pred["pred_boxes"] = box_cxcywh_to_xyxy(tube_pred["pred_boxes"])
-        results = PostProcess()(tube_pred, vid_orig_size).to(device) # 1x32x10x4
+        results = PostProcess()(tube_pred, vid_orig_size).to(device)# 1x32x10x4
         results = results[:,0,:].unsqueeze(1)
 
         bbox_res = {}  # maps image_id to the coordinates of the detected box
@@ -175,45 +176,7 @@ if __name__ == "__main__":
                             args.save_dir,
                             video_id)
         # extract actual images from the video to process them adding boxes
-
-        colors = np.random.rand(results.size(1), 3)  # 3 for RGB components
-        for idx, frm_id in enumerate(video_frame_ids):
-            # load extracted image
-            img_path = os.path.join(
-                video_path,
-                video_id,
-                frm_id+".png"
-            )
-            img = Image.open(img_path).convert("RGB")
-            imgw, imgh = img.size
-            fig, ax = plt.subplots()
-            ax.axis("off")
-            ax.imshow(img, aspect="auto")
-            # put other frames of the video in the directory as well not only the sampled ones
-            for i, pred_bbox in enumerate(results[idx]):
-                x1, y1, x2, y2 = pred_bbox
-                w = x2 - x1
-                h = y2 - y1
-
-                rect = plt.Rectangle(
-                    (x1, y1), w, h, linewidth=2, edgecolor=colors[i], fill=False
-                )
-                ax.add_patch(rect)
-
-            fig.set_dpi(100)
-            fig.set_size_inches(imgw / 100, imgh / 100)
-            fig.tight_layout(pad=0)
-
-            # save image with eventual box
-            fig.savefig(
-                os.path.join(
-                    video_save_path,
-                    frm_id+".png"
-                    )
-                ,
-                format="png",
-            )
-            plt.close(fig)
+        draw_and_save_rects(os.path.join(video_path, video_id), video_frame_ids, results, video_save_path)
 
         for k, v in output.items():
             if k in {"question", "answer", "prediction"}:

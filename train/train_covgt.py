@@ -29,9 +29,10 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
         for i, batch in enumerate(tqdm(data_loader, desc="Evaluating batches", unit="batch")):
             # if i == 2:
             #     break
-            answer_id, answer, video_o, video_f, vid_orig_size, question, question_id, seg_feats, seg_num , bboxes, bboxes_mask = (
+            answer_id, answer, video_id, video_o, video_f, vid_orig_size, question, question_id, seg_feats, seg_num , bboxes, bboxes_mask, frame_mapping = (
                 batch["answer_id"],
                 batch["answer"].cuda(),
+                batch["video_id"],
                 batch["video_o"].cuda(),
                 batch["video_f"].cuda(),
                 batch["orig_size"],
@@ -40,7 +41,8 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                 batch['seg_feats'].cuda(),
                 batch['seg_num'],
                 batch['bboxes'],  # visual answer locations (gt)
-                batch['bboxes_mask']  # mask of visual answer locations (gt)
+                batch['bboxes_mask'],  # mask of visual answer locations (gt)
+                batch['frame_mapping']
             )
 
             video_len = batch["video_len"]
@@ -114,11 +116,13 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
                 questions = batch["question_txt"]
                 for bs, qid in enumerate(question_id):
                     question = questions[bs]
+                    vid_id = video_id[bs]
+                    frame_map = frame_mapping[bs]
                     pred_id = int(predicted.numpy()[bs])
                     ans_id = int(answer_id.numpy()[bs])
                     pred = choices[pred_id][bs]
                     ans = choices[ans_id][bs]
-                    qa_predictions[qid] = {'question': question, 'prediction': pred, 'answer':ans}
+                    qa_predictions[qid] = {'video_id': vid_id, 'question': question, 'prediction': pred, 'answer':ans, 'frame_mapping': frame_map}
 
 
                 # convert predicts from relative [0, 1] to absolute [0, height] coordinates

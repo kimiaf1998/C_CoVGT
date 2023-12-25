@@ -261,7 +261,6 @@ class VideoQADataset(Dataset):
         start_t = cur_sample['start']
         end_t = cur_sample['end']
         # a dict containing mapping of frame id to frame idx (32 sampled)
-        idx = 0
         vid_id = cur_sample["video_id"]
         vid_id = str(vid_id)
 

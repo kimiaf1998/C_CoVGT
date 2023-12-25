@@ -1,5 +1,8 @@
 import cv2
-
+import numpy as np
+from PIL import Image
+import matplotlib.pyplot as plt
+import os
 
 def draw_rectangle(img,
                    bbox,
@@ -241,6 +244,7 @@ def draw_multiple_rectangles(img,
     """
 
     for bid, bbox in enumerate(bboxes):
+        bbox= [int(np.round(b)) for b in bbox]
         img = draw_rectangle(img, bbox, bbox_color[bid], thickness, is_opaque,
                              alpha)
     return img
@@ -356,3 +360,24 @@ def draw_multiple_flags_with_labels(img,
         img = draw_flag_with_label(img, label, bbox, write_label, line_color,
                                    text_bg_color, text_color)
     return img
+
+
+def draw_and_save_rects(video_path, frame_ids, boxes, video_save_path):
+    colors = np.random.rand(boxes.size(1), 3)  # 3 for RGB components
+    for idx, frm_id in enumerate(frame_ids):
+        # load extracted image
+        img_path = os.path.join(
+            video_path,
+            frm_id + ".png"
+        )
+        img = Image.open(img_path).convert("RGB")
+        img = np.array(img)
+        img = draw_multiple_rectangles(img, boxes[idx], colors)
+        img = Image.fromarray(img)
+        # save image with eventual box
+        img.save(os.path.join(
+                video_save_path,
+                frm_id + ".png"
+            )
+            ,
+            format="png")
