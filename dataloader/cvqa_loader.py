@@ -190,7 +190,7 @@ class VideoQADataset(Dataset):
         for cid, clip in enumerate(clips):
             clip_feat, clip_rfeat, clip_rbbox = [], [], []
             for fid in clip:
-                fid = int(fid)
+                fid = int(fid)-1
                 frame_feat_file = osp.join(video_feature_path, f'frame_feat/{video_name}/{fid:06d}.npy')
                 frame_feat = np.load(frame_feat_file)
                 clip_feat.append(frame_feat)

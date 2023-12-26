@@ -194,9 +194,6 @@ def main(args):
         save_path = osp.join(args.save_dir, 'val-res0.json')
         save_to(save_path, results)
         # Visualize results
-        batch0 = next(iter(test_loader))
-        vid_orig_size = batch0["orig_size"][0]
-        print("orig size:", vid_orig_size)
 
         for q_id, values in results.items():
 
@@ -210,18 +207,27 @@ def main(args):
             gt_text = gt['desc']
             gt_boxes = gt['box']
             pred_boxes_cp = pred_boxes.copy()
+            gt_boxes_cp = gt_boxes.copy()
 
+            from PIL import Image
+            img = Image.open(osp.join(args.video_dir, video_id, f'{video_frame_ids[0]:06}.png'))
+            vid_orig_size = torch.tensor(img.size)
+            w, h = img.size
             if video_id == "7MRKY":
-                pred_boxes = box_cxcywh_to_xyxy(torch.tensor(pred_boxes))
-                pred_boxes = PostProcess()(pred_boxes, vid_orig_size.repeat(pred_boxes.shape[0], 1))  # 32x10x4
-
-                # gt_boxes = box_cxcywh_to_xyxy(torch.tensor(gt_boxes))
-                # gt_boxes = PostProcess()(gt_boxes, vid_orig_size.repeat(gt_boxes.shape[0], 1))  # 32x10x4
-
+                print("orig size:", vid_orig_size)
+                pred_boxes = torch.tensor(pred_boxes)
+                gt_boxes = torch.tensor(gt_boxes)
                 if pred_boxes.ndim == 3:
                     pred_boxes = pred_boxes[:, 0, :]
+                # pred_boxes = PostProcess()(pred_boxes, vid_orig_size.repeat(pred_boxes.shape[0], 1))  # 32x10x4
+                #
+                # gt_boxes = PostProcess()(gt_boxes, vid_orig_size.repeat(gt_boxes.shape[0], 1))  # 32x10x4
 
-                total_boxes = np.stack((np.array(gt_boxes), pred_boxes.numpy()), axis=1)
+                pred_boxes = pred_boxes* torch.tensor([w,h,w,h])
+                gt_boxes = gt_boxes* torch.tensor([w,h,w,h])
+                print("GT:", gt_boxes)
+
+                total_boxes = np.stack((gt_boxes.numpy(), pred_boxes.numpy()), axis=1)
 
                 video_save_path = os.path.join(
                     args.save_dir,
@@ -245,6 +251,7 @@ def main(args):
                 for i, box in enumerate(pred_boxes):
                     print("pred_box orig", pred_boxes_cp[i])
                     print("pred_box scaled",box)
+                    print("gt orig", gt_boxes_cp[i])
                     print("gt box scaled",gt_boxes[i])
                 break
 
