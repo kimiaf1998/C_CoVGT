@@ -14,10 +14,16 @@ def find_dividers(lst: list, k: int) -> list:
     if k == len(lst):
         return lst
 
-    section_size = len(lst) // (k + 1)
-    divider_indices = [i * section_size for i in range(1, k + 1)]
-    divider_elements = [lst[index] for index in divider_indices]
-
+    if k > len(lst):
+        divider_elements = lst
+        remainder = k - len(lst)
+        rands = np.random.randint(0, len(lst), size = remainder)
+        for r in rands:
+            divider_elements.append(lst[r])
+    else:
+        section_size = len(lst) // (k + 1)
+        divider_indices = [i * section_size for i in range(1, k + 1)]
+        divider_elements = [lst[index] for index in divider_indices]
     return divider_elements
 
 
@@ -48,12 +54,17 @@ def sample_videos_clips(video_path: str, ann_data, num_clips: int, num_frames_pe
         vid_id = vid_data['video_id']
         vid_qid = vid_data['question_id']
         vid_key_frames = list(vid_data['bboxes'].keys())
+        # vid_key_frames = ["000013", "000032", "000037", "000047", "000026", "000084", "000068", "000067", "000061", "000049", "000089", "000108", "000101", "000110"]
         vid_frames_dir = os.path.join(video_path, vid_id)
-        print(os.path.basename(vid_frames_dir))
         try:
             vid_frames = os.listdir(vid_frames_dir)
+            # vid sample => TJZ0P
+#             vid_frames = ["000000",  "000015",  "000030",  "000051","  000063","  000075","  000084","  000096","  000108",
+# "000003", " 000024","  000039","  000054","  000066","  000078","  000087",  "000099",  "000111",
+# "000012",  "000027","  000042",  "000057","  000069","  000081","  000093", " 000105", " 000120"]
             # extract frame numbers
-            vid_frames = sorted([os.path.splitext(frame_path.split(".")[0])[0] for frame_path in vid_frames])
+            vid_frames = sorted([f'{(int(os.path.splitext(frame_path.split(".")[0])[0])+1):06}' for frame_path in vid_frames])
+            # vid_frames = sorted([f'{(int(frame_path)+1):06}' for frame_path in vid_frames])
             vid_clips = extract_clips_with_keyframes_included(vid_frames, vid_key_frames, num_clips,
                                                               num_frames_per_clip)
             videos.update({vid_qid: vid_clips.tolist()})

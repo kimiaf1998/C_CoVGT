@@ -44,6 +44,8 @@ def get_parser():
         help="use a subset of the generated dataset",
     )
 
+
+
     # Model
     parser.add_argument(
         "--baseline",
@@ -186,6 +188,9 @@ def get_parser():
     )
     parser.add_argument(
         "--save_dir", type=str, default="./save_models/", help="path to save dir"
+    )
+    parser.add_argument(
+        "--video_dir", type=str, default="/data/kimia/hdd3_mount/kimia/data/STAR/frames_orig_fps", help="path to videos dir"
     )
     parser.add_argument(
         "--mc", type=int, default=4, help="number of multiple choices"

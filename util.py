@@ -36,10 +36,12 @@ def tokenize(
     tokens = ''
     return torch.tensor(token_ids, dtype=torch.long), tokens
 
-def transform_bb(roi_bbox, width, height):
+def transform_bb(roi_bbox, width, height, a=False):
     dshape = list(roi_bbox.shape)
     tmp_bbox = roi_bbox.reshape([-1, 4])
     relative_bbox = tmp_bbox / np.asarray([width, height, width, height])
+    if a:
+        print("reltive:", relative_bbox.reshape(dshape))
     relative_area = (tmp_bbox[:, 2] - tmp_bbox[:, 0] + 1) * \
                     (tmp_bbox[:, 3] - tmp_bbox[:, 1] + 1)/ (width*height)
     relative_area = relative_area.reshape(-1, 1)

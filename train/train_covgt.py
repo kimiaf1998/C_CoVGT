@@ -150,7 +150,7 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
     outputs["results"] = {
         question_id: {
             "video_id": qa_predictions[question_id]['video_id'],
-            "frame_mapping": qa_predictions[question_id]['frame_map'],
+            "frame_mapping": qa_predictions[question_id]['frame_map'].tolist(),
             'question': qa_predictions[question_id]['question'],
                 "prediction": {"desc": qa_predictions[question_id]['prediction'],
                            "box": loc_predictions[question_id]['prediction'].detach().cpu().tolist()},

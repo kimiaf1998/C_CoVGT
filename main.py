@@ -15,6 +15,7 @@ from util import compute_a2v, load_model_by_key, save_to, plot_and_save_epochs_r
 from dataloader.cvqa_loader import get_videoqa_loaders
 from train.train_covgt import train, eval
 from tools.bbox_visualizer import draw_and_save_rects, add_label
+from tools.postprocess import PostProcess
 from tqdm import tqdm
 from tools.box_ops import box_cxcywh_to_xyxy
 
@@ -193,35 +194,59 @@ def main(args):
         save_path = osp.join(args.save_dir, 'val-res0.json')
         save_to(save_path, results)
         # Visualize results
+        batch0 = next(iter(test_loader))
+        vid_orig_size = batch0["orig_size"][0]
+        print("orig size:", vid_orig_size)
 
         for q_id, values in results.items():
+
             preds = values["prediction"]
             gt = values["answer"]
             video_id = values['video_id']
-            frame_mapping = values['frame_mapping']
-            video_frame_ids = frame_mapping.values()
+            video_frame_ids = values['frame_mapping']
             question = values['question']
             pred_text = preds['desc']
             pred_boxes = preds['box']
             gt_text = gt['desc']
             gt_boxes = gt['box']
+            pred_boxes_cp = pred_boxes.copy()
 
-            pred_boxes = box_cxcywh_to_xyxy(pred_boxes)
-            pred_boxes = PostProcess()(pred_boxes, vid_orig_size).to(device)  # nx32x10x4
-            pred_boxes = pred_boxes[..., 0, :]
+            if video_id == "7MRKY":
+                pred_boxes = box_cxcywh_to_xyxy(torch.tensor(pred_boxes))
+                pred_boxes = PostProcess()(pred_boxes, vid_orig_size.repeat(pred_boxes.shape[0], 1))  # 32x10x4
 
-            print("boxes:", pred_boxes.shape)
-            video_save_path = os.path.join(
-                args.save_dir,
-                video_id)
-            # extract actual images from the video to process them adding boxes
-            draw_and_save_rects(os.path.join(video_path, video_id), video_frame_ids, pred_boxes, video_save_path)
-            draw_and_save_rects(os.path.join(video_path, video_id), video_frame_ids, gt_boxes, video_save_path)
+                # gt_boxes = box_cxcywh_to_xyxy(torch.tensor(gt_boxes))
+                # gt_boxes = PostProcess()(gt_boxes, vid_orig_size.repeat(gt_boxes.shape[0], 1))  # 32x10x4
 
-            # Add question/answer/preds
-            add_label(img, question+" "+gt_text, [10, 10, 20, 15])
-            add_label(img, "pred: "+pred_text, [10 ,20, 20, 25])
-            print(f"Video saved in {video_save_path}")
+                if pred_boxes.ndim == 3:
+                    pred_boxes = pred_boxes[:, 0, :]
+
+                total_boxes = np.stack((np.array(gt_boxes), pred_boxes.numpy()), axis=1)
+
+                video_save_path = os.path.join(
+                    args.save_dir,
+                    video_id,
+                    q_id)
+                if not os.path.exists(video_save_path):
+                    os.makedirs(video_save_path)
+                # extract actual images from the video to process them adding boxes
+                draw_and_save_rects(osp.join(args.video_dir, video_id), video_frame_ids, total_boxes, video_save_path) # TODO draw gt as well
+
+                # Add question/answer/preds
+                file_path = osp.join(video_save_path, 'pred.txt')
+
+                # Open the file in write mode ('w')
+                with open(file_path, 'w') as file:
+                    # Write some text to the file
+                    file.write(question+" "+gt_text+ "\n")
+                    file.write("pred: "+pred_text + "\n")
+
+                print(f"Video saved in {video_save_path}")
+                for i, box in enumerate(pred_boxes):
+                    print("pred_box orig", pred_boxes_cp[i])
+                    print("pred_box scaled",box)
+                    print("gt box scaled",gt_boxes[i])
+                break
 
 
 
