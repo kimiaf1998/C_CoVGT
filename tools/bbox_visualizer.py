@@ -363,10 +363,10 @@ def draw_multiple_flags_with_labels(img,
 
 
 def draw_and_save_rects(video_path, frame_ids, boxes, video_save_path):
-    colors = np.random.rand(boxes.shape[1], 3)  # 3 for RGB components
+    colors = np.random.randint(0, 256, size=(boxes.shape[1], 3)).tolist()  # 3 for RGB components
     for idx, frm_id in enumerate(frame_ids):
         # load extracted image
-        frm_id = f'{frm_id:06}'
+        frm_id = f'{int(frm_id):06}'
         img_path = os.path.join(
             video_path,
             frm_id + ".png"

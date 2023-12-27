@@ -296,16 +296,7 @@ class VideoQADataset(Dataset):
         # frame_map store mapping between frames idx in the list and their corresponding real frame id
         bboxes, bboxes_mask, frame_map = self.filter_bboxes_by_sampled_clips(cur_sample, self.vid_clips[qid]) # bboxes = (bs, numc*numf, 4)
         # normalize bboxes
-        a=False
-        if qid=="Interaction_T1_197":
-            print("frame map:", frame_map)
-            print("gt before norm:", bboxes)
-            a=True
-        bboxes = transform_bb(bboxes, width, height, a)[..., :-1]
-        if qid == "Interaction_T1_197":
-            print("gt after norm:", bboxes)
-
-            print("width:", width)
+        bboxes = transform_bb(bboxes, width, height)[..., :-1]
         numc, numf, numr, d_model = video_o.shape
         vid_duration = numc
 

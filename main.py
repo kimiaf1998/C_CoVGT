@@ -15,7 +15,6 @@ from util import compute_a2v, load_model_by_key, save_to, plot_and_save_epochs_r
 from dataloader.cvqa_loader import get_videoqa_loaders
 from train.train_covgt import train, eval
 from tools.bbox_visualizer import draw_and_save_rects, add_label
-from tools.postprocess import PostProcess
 from tqdm import tqdm
 from tools.box_ops import box_cxcywh_to_xyxy
 
@@ -79,7 +78,7 @@ def main(args):
     
     if args.pretrain_path != "":
         # models.load_state_dict(torch.load(args.pretrain_path))
-        model.load_state_dict(load_model_by_key(model, args.pretrain_path))
+        model.load_state_dict(load_model_by_key(model, args.pretrain_path, args.device))
         logging.info(f"Loaded checkpoint {args.pretrain_path}")
     logging.info(
         f"Nb of trainable params:{sum(p.numel() for p in model.parameters() if p.requires_grad)}"
@@ -206,54 +205,38 @@ def main(args):
             pred_boxes = preds['box']
             gt_text = gt['desc']
             gt_boxes = gt['box']
-            pred_boxes_cp = pred_boxes.copy()
-            gt_boxes_cp = gt_boxes.copy()
 
             from PIL import Image
             img = Image.open(osp.join(args.video_dir, video_id, f'{video_frame_ids[0]:06}.png'))
-            vid_orig_size = torch.tensor(img.size)
             w, h = img.size
-            if video_id == "7MRKY":
-                print("orig size:", vid_orig_size)
-                pred_boxes = torch.tensor(pred_boxes)
-                gt_boxes = torch.tensor(gt_boxes)
-                if pred_boxes.ndim == 3:
-                    pred_boxes = pred_boxes[:, 0, :]
-                # pred_boxes = PostProcess()(pred_boxes, vid_orig_size.repeat(pred_boxes.shape[0], 1))  # 32x10x4
-                #
-                # gt_boxes = PostProcess()(gt_boxes, vid_orig_size.repeat(gt_boxes.shape[0], 1))  # 32x10x4
+            pred_boxes = torch.tensor(pred_boxes)
+            gt_boxes = torch.tensor(gt_boxes)
+            if pred_boxes.ndim == 3:
+                pred_boxes = pred_boxes[:, 0, :]
 
-                pred_boxes = pred_boxes* torch.tensor([w,h,w,h])
-                gt_boxes = gt_boxes* torch.tensor([w,h,w,h])
-                print("GT:", gt_boxes)
+            pred_boxes = pred_boxes * torch.tensor([w,h,w,h])
+            gt_boxes = gt_boxes * torch.tensor([w,h,w,h])
 
-                total_boxes = np.stack((gt_boxes.numpy(), pred_boxes.numpy()), axis=1)
+            video_save_path = os.path.join(
+                args.save_dir,
+                video_id,
+                q_id)
+            if not os.path.exists(video_save_path):
+                os.makedirs(video_save_path)
+            # extract actual images from the video to process them adding boxes
+            draw_and_save_rects(osp.join(args.video_dir, video_id), video_frame_ids, pred_boxes.unsqueeze(1), video_save_path)
+            draw_and_save_rects(video_save_path, video_frame_ids, gt_boxes.unsqueeze(1), video_save_path)
 
-                video_save_path = os.path.join(
-                    args.save_dir,
-                    video_id,
-                    q_id)
-                if not os.path.exists(video_save_path):
-                    os.makedirs(video_save_path)
-                # extract actual images from the video to process them adding boxes
-                draw_and_save_rects(osp.join(args.video_dir, video_id), video_frame_ids, total_boxes, video_save_path) # TODO draw gt as well
+            # Add question/answer/preds
+            file_path = osp.join(video_save_path, 'pred.txt')
 
-                # Add question/answer/preds
-                file_path = osp.join(video_save_path, 'pred.txt')
+            # Open the file in write mode ('w')
+            with open(file_path, 'w') as file:
+                # Write some text to the file
+                file.write(question+" "+gt_text+ "\n")
+                file.write("pred: "+pred_text + "\n")
 
-                # Open the file in write mode ('w')
-                with open(file_path, 'w') as file:
-                    # Write some text to the file
-                    file.write(question+" "+gt_text+ "\n")
-                    file.write("pred: "+pred_text + "\n")
-
-                print(f"Video saved in {video_save_path}")
-                for i, box in enumerate(pred_boxes):
-                    print("pred_box orig", pred_boxes_cp[i])
-                    print("pred_box scaled",box)
-                    print("gt orig", gt_boxes_cp[i])
-                    print("gt box scaled",gt_boxes[i])
-                break
+            print(f"Video saved in {video_save_path}")
 
 
 

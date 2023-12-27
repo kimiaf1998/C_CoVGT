@@ -36,12 +36,10 @@ def tokenize(
     tokens = ''
     return torch.tensor(token_ids, dtype=torch.long), tokens
 
-def transform_bb(roi_bbox, width, height, a=False):
+def transform_bb(roi_bbox, width, height):
     dshape = list(roi_bbox.shape)
     tmp_bbox = roi_bbox.reshape([-1, 4])
     relative_bbox = tmp_bbox / np.asarray([width, height, width, height])
-    if a:
-        print("reltive:", relative_bbox.reshape(dshape))
     relative_area = (tmp_bbox[:, 2] - tmp_bbox[:, 0] + 1) * \
                     (tmp_bbox[:, 3] - tmp_bbox[:, 1] + 1)/ (width*height)
     relative_area = relative_area.reshape(-1, 1)
@@ -368,8 +366,8 @@ def group(csv_data, gt=True):
     return ans_group, qsn_group
 
 
-def load_model_by_key(cur_model, model_path):
-    model_dict = torch.load(model_path)
+def load_model_by_key(cur_model, model_path, device):
+    model_dict = torch.load(model_path, map_location=torch.device(device))
     new_model_dict = {}
     for k, v in cur_model.state_dict().items():
         if k in model_dict:

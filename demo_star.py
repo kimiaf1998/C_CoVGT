@@ -2,6 +2,7 @@ import argparse
 
 import torch
 import os
+import shutil
 import os.path as osp
 import numpy as np
 from args import get_args, get_parser
@@ -12,11 +13,9 @@ from transformers import RobertaTokenizerFast
 
 from models.Tube_CoVGT import build_model
 from tools.object_align import align
-from tools.postprocess import PostProcess
-from tools.util import tokenize, load_file, transform_bb, load_model_by_key
+from util import tokenize, load_file, transform_bb, load_model_by_key, get_mask
 from tools.box_ops import box_cxcywh_to_xyxy
 from tools.bbox_visualizer import draw_and_save_rects
-from util import get_mask
 
 video_path = f'/data/kimia/hdd3_mount/kimia/data/STAR/frames_orig_fps'
 
@@ -29,8 +28,7 @@ def get_video_info(video_name, qid):
     roi_feats, roi_bboxs = [], []
     video_frame_ids = []
     fid = vid_clips[0][0]
-    # features indices starts from 0 while frames 1
-    img = Image.open(f'{video_path}/{video_name}/{int(fid) + 1:06}.png')
+    img = Image.open(f'{video_path}/{video_name}/{fid}.png')
     width, height = img.size
     img.close()
 
@@ -39,7 +37,8 @@ def get_video_info(video_name, qid):
         clip_frame_ids = []
         for fid in clip:
             clip_frame_ids.append(fid)
-            fid = int(fid)
+            fid = int(fid) - 1
+            # features indices starts from 0 while frames 1
             frame_feat_file = osp.join(video_feature_path, f'frame_feat/{video_name}/{fid:06d}.npy')
             frame_feat = np.load(frame_feat_file)
             clip_feat.append(frame_feat)
@@ -83,8 +82,6 @@ if __name__ == "__main__":
     model.to(device)
     print("models loaded")
 
-    postprocessors = PostProcess()
-
     # load checkpoint
     assert args.load
     model.load_state_dict(load_model_by_key(model, args.load, device))
@@ -124,7 +121,7 @@ if __name__ == "__main__":
     video_o = video_o.unsqueeze(0).to(device)
     samples = (video_o, video_f)
     questions = torch.tensor([0], dtype=torch.long).unsqueeze(0).to(device)
-    vid_orig_size = torch.tensor(vid_orig_size).unsqueeze(0)
+    w, h = vid_orig_size
 
     answer_mask = (ans_token_ids != tokenizer.pad_token_id).float().to(device)  # RobBERETa
     video_mask = get_mask(torch.tensor([video_o.size(1)]).to(device), video_o.size(1))
@@ -154,9 +151,8 @@ if __name__ == "__main__":
         output.update({'question': question_txt, 'prediction': pred, 'answer': answer_txt})
 
         # convert predicts from relative [0, 1] to absolute [0, height] coordinates
-        tube_pred["pred_boxes"] = box_cxcywh_to_xyxy(tube_pred["pred_boxes"])
-        results = PostProcess()(tube_pred, vid_orig_size).to(device)# 1x32x10x4
-        results = results[:,0,:].unsqueeze(1)
+        results = box_cxcywh_to_xyxy(tube_pred["pred_boxes"]) * torch.tensor([w,h,w,h]) # 1x32x10x4
+        results = results[:,0,:].unsqueeze(1).to(device)
 
         bbox_res = {}  # maps image_id to the coordinates of the detected box
         video_frame_ids = np.asarray(video_frame_ids).reshape(-1)
@@ -175,6 +171,11 @@ if __name__ == "__main__":
         video_save_path = os.path.join(
                             args.save_dir,
                             video_id)
+
+        if os.path.exists(video_save_path):
+            shutil.rmtree(video_save_path)
+            
+        os.makedirs(video_save_path)
         # extract actual images from the video to process them adding boxes
         draw_and_save_rects(os.path.join(video_path, video_id), video_frame_ids, results, video_save_path)
 

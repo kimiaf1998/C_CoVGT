@@ -8,7 +8,6 @@ import os.path as osp
 import json
 from tqdm import tqdm
 #from fvcore.nn import FlopCountAnalysis
-from tools.postprocess import PostProcess
 from eval.star_eval import STAREvaluator
 
 def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
