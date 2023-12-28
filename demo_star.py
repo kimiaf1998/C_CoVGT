@@ -174,7 +174,7 @@ if __name__ == "__main__":
 
         if os.path.exists(video_save_path):
             shutil.rmtree(video_save_path)
-            
+
         os.makedirs(video_save_path)
         # extract actual images from the video to process them adding boxes
         draw_and_save_rects(os.path.join(video_path, video_id), video_frame_ids, results, video_save_path)

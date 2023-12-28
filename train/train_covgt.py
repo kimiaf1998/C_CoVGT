@@ -26,8 +26,8 @@ def eval(model, data_loader, a2v, args, test=False, tokenizer="RoBERTa"):
         if not args.mc:
             model.module._compute_answer_embedding(a2v)
         for i, batch in enumerate(tqdm(data_loader, desc="Evaluating batches", unit="batch")):
-            if i == 2:
-                break
+            # if i == 2:
+            #     break
             answer_id, answer, video_id, video_o, video_f, vid_orig_size, question, question_id, seg_feats, seg_num , bboxes, bboxes_mask, frame_mapping = (
                 batch["answer_id"],
                 batch["answer"].cuda(),

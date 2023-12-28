@@ -196,7 +196,12 @@ class VideoQADataset(Dataset):
                 clip_feat.append(frame_feat)
 
                 region_feat_file = osp.join(video_feature_path, f'bbox/{video_name}/{fid:06d}.npz')
-                region_feat = np.load(region_feat_file)
+                try:
+                    region_feat = np.load(region_feat_file)
+                except:
+                    print(region_feat_file)
+
+
                 clip_rfeat.append(region_feat['x'])
                 clip_rbbox.append(region_feat['bbox'])
             app_feats.append(clip_feat)

@@ -89,7 +89,6 @@ def main(args):
         val_loader,
         test_loader,
     ) = get_videoqa_loaders(args, args.features_path, a2id, tokenizer, test_mode = args.test)
-
     if args.test:
         logging.info("number of test instances: {}".format(len(test_loader.dataset)))
     else:
